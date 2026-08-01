@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWalletStore } from "@/lib/store";
 import { createProjectOnChain } from "@/lib/soroban";
-import { Plus, Trash, ShieldCheck, Vault, ArrowUpRight, Spinner } from "@phosphor-icons/react";
+import { Plus, Trash, ShieldCheck, Vault, ArrowUpRight, Spinner, Sparkle } from "@phosphor-icons/react";
 
 interface MilestoneInput {
   desc: string;
@@ -50,7 +50,7 @@ export default function CreateProjectPage() {
     try {
       const milestoneDescs = milestones.map((m) => m.desc);
       const milestoneAmounts = milestones.map((m) => Math.round((parseFloat(m.amount) || 0) * 10000000));
-      const dummyToken = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMWAACNHB4B6QZ";
+      const nativeXlmSac = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMWAACNHB4B6QZ";
 
       await createProjectOnChain(
         address,
@@ -59,7 +59,7 @@ export default function CreateProjectPage() {
         verifiers,
         milestoneDescs,
         milestoneAmounts,
-        dummyToken
+        nativeXlmSac
       );
 
       setStatusMsg("Project created! Escrow budget locked into Treasury.");
@@ -75,13 +75,15 @@ export default function CreateProjectPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="space-y-2 sm:space-y-3 border-b border-white/10 pb-4 sm:pb-6">
-        <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
-          Create Infrastructure Project
-        </h1>
-        <p className="text-white/60 text-xs sm:text-sm max-w-[60ch]">
-          Define milestone payment schedule and lock total project budget into the Soroban Treasury escrow contract.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6">
+        <div className="space-y-2 sm:space-y-3">
+          <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            Create Infrastructure Project
+          </h1>
+          <p className="text-white/60 text-xs sm:text-sm max-w-[60ch]">
+            Define milestone payment schedule and lock total project budget into the Soroban Treasury escrow contract.
+          </p>
+        </div>
       </div>
 
       {/* Double-Bezel Form Container */}
@@ -110,7 +112,7 @@ export default function CreateProjectPage() {
             <input
               type="text"
               required
-              placeholder="G..."
+              placeholder="G... (Stellar Public Key)"
               value={contractor}
               onChange={(e) => setContractor(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 font-mono text-xs sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-all"

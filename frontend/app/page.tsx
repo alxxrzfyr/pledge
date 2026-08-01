@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAllProjects } from "@/lib/soroban";
 import { ProjectCard } from "@/components/ProjectCard";
@@ -8,13 +8,24 @@ import { ProjectState } from "@/lib/types";
 import { MagnifyingGlass, ArrowUpRight } from "@phosphor-icons/react";
 import Link from "next/link";
 
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const isClient = useIsClient();
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: getAllProjects,
+    enabled: isClient,
     refetchInterval: 5000,
   });
 
