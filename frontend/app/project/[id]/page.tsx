@@ -273,7 +273,7 @@ export default function ProjectDetailPage({
                         <span className="text-white/90">{milestone.proofCid}</span>
                       </div>
                       <a
-                        href={`https://ipfs.io/ipfs/${milestone.proofCid}`}
+                        href={`https://gateway.pinata.cloud/ipfs/${milestone.proofCid}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-white hover:text-emerald-400 flex items-center gap-1 font-semibold transition-colors"
