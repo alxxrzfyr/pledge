@@ -26,7 +26,6 @@ Pledge is a public, on-chain infrastructure fund tracker built on **Stellar (Sor
 ### Live Links
 - **Live Application Demo:** [pledge-dapp.vercel.app](https://pledge-dapp.vercel.app) *(replace with live deployment URL)*
 - **Demo Video (1 to 2 minutes):** [View on YouTube](https://youtube.com/watch?v=YOUR_VIDEO_ID) *(replace with demo video link)*
-- **GitHub Repository:** [github.com/your-username/pledge](https://github.com/your-username/pledge)
 
 ### Soroban Testnet Contract Deployments
 - **Registry Contract Address:** `CA73G2P6XVL2XJ47Z6K4W7X9Y...` *(replace with deployed Registry address)*
