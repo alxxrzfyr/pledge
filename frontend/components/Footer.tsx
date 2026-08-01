@@ -3,7 +3,7 @@ import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 
 export function Footer() {
   return (
-    <footer className="w-full border-t border-white/10 py-16 bg-[#040406] text-xs text-white/60">
+    <footer className="w-full border-t border-white/10 py-8 sm:py-16 bg-[#040406] text-xs text-white/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 shrink-0">

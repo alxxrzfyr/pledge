@@ -133,74 +133,67 @@ export default function ProjectDetailPage({
   const isVerifier = address && project.verifiers.some((v) => v.toLowerCase() === address.toLowerCase());
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
+    <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
       {/* Header Info Card */}
-      <section className="p-2 bg-white/5 border border-white/10 rounded-[2.5rem] ambient-glow">
-        <div className="bg-[#07070a] rounded-[calc(2.5rem-0.5rem)] p-8 sm:p-10 space-y-6 inner-bezel-shadow border border-white/5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-white/60 font-semibold bg-white/5 px-2.5 py-0.5 rounded border border-white/10">
-                  Project #{project.id}
+      <section className="p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] ambient-glow">
+        <div className="bg-[#07070a] rounded-[calc(2rem-0.4rem)] sm:rounded-[calc(2.5rem-0.5rem)] p-4 sm:p-10 space-y-4 sm:space-y-6 inner-bezel-shadow border border-white/5">
+          <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:pb-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-white/60 font-semibold bg-white/5 px-2.5 py-0.5 rounded border border-white/10">
+                Project #{project.id}
+              </span>
+              {project.status === ProjectState.Completed && (
+                <span className="rounded-full px-3 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  Completed & Released
                 </span>
-                {project.status === ProjectState.Completed && (
-                  <span className="rounded-full px-3 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                    Completed & Released
-                  </span>
-                )}
-                {project.status === ProjectState.Flagged && (
-                  <span className="rounded-full px-3 py-1 text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
-                    Flagged ({project.flagCount})
-                  </span>
-                )}
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              )}
+              {project.status === ProjectState.Flagged && (
+                <span className="rounded-full px-3 py-1 text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                  Flagged ({project.flagCount})
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h1 className="text-xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
                 {project.name}
               </h1>
+              <button
+                onClick={() => flagMutation.mutate()}
+                disabled={flagMutation.isPending || !isConnected}
+                className="rounded-full px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50 self-start sm:self-auto shrink-0"
+              >
+                <Flag size={14} weight="light" />
+                <span>Flag Project</span>
+              </button>
             </div>
-
-            <button
-              onClick={() => flagMutation.mutate()}
-              disabled={flagMutation.isPending || !isConnected}
-              className="rounded-full px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
-            >
-              <Flag size={16} weight="light" />
-              <span>Flag Project</span>
-            </button>
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-            <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-              <span className="text-xs text-white/40 block mb-1 font-medium">
-                Escrowed Budget
-              </span>
-              <span className="text-xl font-bold font-mono text-emerald-400">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5">
+              <span className="text-xs text-white/40 block mb-1 font-medium">Escrowed Budget</span>
+              <span className="text-lg sm:text-xl font-bold font-mono text-emerald-400">
                 {project.totalBudget}
               </span>
             </div>
-            <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-              <span className="text-xs text-white/40 block mb-1 font-medium">
-                LGU Funder
-              </span>
-              <span className="font-mono text-white/80 block truncate">{project.lgu}</span>
+            <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5">
+              <span className="text-xs text-white/40 block mb-1 font-medium">LGU Funder</span>
+              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">{project.lgu}</span>
             </div>
-            <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
-              <span className="text-xs text-white/40 block mb-1 font-medium">
-                Contractor
-              </span>
-              <span className="font-mono text-white/80 block truncate">{project.contractor}</span>
+            <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5">
+              <span className="text-xs text-white/40 block mb-1 font-medium">Contractor</span>
+              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">{project.contractor}</span>
             </div>
           </div>
 
           {/* Verifiers */}
-          <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-xs">
+          <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5 text-xs">
             <span className="text-xs text-white/40 block mb-2 font-semibold">
               Independent Verifiers (2-of-3 Multisig Threshold)
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono">
+            <div className="flex flex-col gap-2 font-mono">
               {project.verifiers.map((ver, idx) => (
-                <div key={idx} className="bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 text-white/80 truncate">
+                <div key={idx} className="bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 text-white/80 truncate text-[11px] sm:text-xs">
                   v{idx + 1}: {ver}
                 </div>
               ))}
@@ -210,12 +203,12 @@ export default function ProjectDetailPage({
       </section>
 
       {/* Milestones Section */}
-      <section className="space-y-6">
+      <section className="space-y-4 sm:space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-emerald-400 border border-white/10">
-            <Vault size={18} weight="light" />
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-emerald-400 border border-white/10 shrink-0">
+            <Vault size={16} weight="light" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
+          <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight">
             Milestones & Escrow Release Schedule
           </h2>
         </div>
@@ -227,21 +220,19 @@ export default function ProjectDetailPage({
             const hasVoted = hasApproved || hasRejected;
 
             return (
-              <div key={milestone.id} className="p-2 bg-white/5 border border-white/10 rounded-[2rem] ambient-glow">
-                <div className="bg-[#0a0a0d] rounded-[calc(2rem-0.5rem)] p-6 space-y-4 border border-white/5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center font-mono font-bold text-xs text-white">
+              <div key={milestone.id} className="p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[1.8rem] sm:rounded-[2rem] ambient-glow">
+                <div className="bg-[#0a0a0d] rounded-[calc(1.8rem-0.4rem)] sm:rounded-[calc(2rem-0.5rem)] p-4 sm:p-6 space-y-4 border border-white/5">
+                  <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center font-mono font-bold text-xs text-white shrink-0">
                         #{milestone.id + 1}
                       </span>
-                      <h3 className="font-bold text-white text-base">{milestone.desc}</h3>
+                      <h3 className="font-bold text-white text-sm sm:text-base leading-snug">{milestone.desc}</h3>
                     </div>
-
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 pl-10">
                       <span className="font-mono font-bold text-emerald-400 text-sm">
                         {milestone.amount}
                       </span>
-
                       {milestone.status === MilestoneState.Verified && (
                         <span className="rounded-full px-3 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           Verified & Released
@@ -254,7 +245,7 @@ export default function ProjectDetailPage({
                       )}
                       {milestone.status === MilestoneState.PendingSubmission && (
                         <span className="rounded-full px-3 py-1 text-xs font-medium bg-white/5 text-white/50 border border-white/10">
-                          Awaiting Contractor Proof
+                          Awaiting Proof
                         </span>
                       )}
                       {milestone.status === MilestoneState.Rejected && (
@@ -267,32 +258,32 @@ export default function ProjectDetailPage({
 
                   {/* IPFS Proof CID */}
                   {milestone.proofCid && (
-                    <div className="bg-black/40 p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
-                      <div className="flex items-center gap-2 overflow-hidden max-w-full">
-                        <FileText size={16} className="text-emerald-400 shrink-0" />
-                        <span className="text-white/40 shrink-0">IPFS CID:</span>
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col gap-2 text-xs font-mono">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText size={14} className="text-emerald-400 shrink-0" />
+                        <span className="text-white/40 shrink-0">CID:</span>
                         <span className="text-white/90 truncate">{milestone.proofCid}</span>
                       </div>
                       <button
                         onClick={() => setActiveEvidence({ cid: milestone.proofCid, desc: milestone.desc, amount: milestone.amount })}
-                        className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 font-semibold transition-colors shrink-0 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20"
+                        className="w-full sm:w-auto text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1.5 font-semibold transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20"
                       >
                         <span>Inspect Evidence</span>
-                        <ArrowUpRight size={14} />
+                        <ArrowUpRight size={13} />
                       </button>
                     </div>
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="pt-1">
                     {isContractor && milestone.status !== MilestoneState.Verified && (
-                      <div>
+                      <div className="flex flex-col gap-2">
                         {uploadingMilestoneId === milestone.id ? (
-                          <div className="flex items-center gap-3">
+                          <>
                             <input
                               type="file"
                               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                              className="text-xs text-white/70 file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-white file:text-black hover:file:bg-white/90 cursor-pointer"
+                              className="text-xs text-white/70 file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-white file:text-black hover:file:bg-white/90 cursor-pointer w-full"
                             />
                             <button
                               disabled={!selectedFile || submitProofMutation.isPending}
@@ -300,19 +291,19 @@ export default function ProjectDetailPage({
                                 selectedFile &&
                                 submitProofMutation.mutate({ milestoneId: milestone.id, file: selectedFile })
                               }
-                              className="rounded-full px-5 py-2 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all disabled:opacity-50"
+                              className="w-full rounded-full py-2.5 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all disabled:opacity-50"
                             >
                               Submit Proof
                             </button>
-                          </div>
+                          </>
                         ) : (
                           <button
                             onClick={() => setUploadingMilestoneId(milestone.id)}
-                            className="rounded-full pl-5 pr-2 py-2 bg-white text-black font-semibold text-xs flex items-center gap-3 group hover:bg-white/90 transition-all"
+                            className="w-full rounded-full pl-5 pr-2 py-2.5 bg-white text-black font-semibold text-xs flex items-center justify-center gap-3 group hover:bg-white/90 transition-all"
                           >
                             <span>Submit Work Proof</span>
-                            <div className="w-6 h-6 rounded-full bg-black/10 flex items-center justify-center text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
-                              <UploadSimple size={14} weight="bold" />
+                            <div className="w-6 h-6 rounded-full bg-black/10 flex items-center justify-center">
+                              <UploadSimple size={13} weight="bold" />
                             </div>
                           </button>
                         )}
@@ -320,7 +311,7 @@ export default function ProjectDetailPage({
                     )}
 
                     {isVerifier && milestone.status === MilestoneState.PendingVerification && (
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         {hasVoted ? (
                           <span className="text-xs text-white/50 italic font-mono">
                             You voted ({hasApproved ? "Approved" : "Rejected"})
@@ -330,17 +321,17 @@ export default function ProjectDetailPage({
                             <button
                               onClick={() => voteMutation.mutate({ milestoneId: milestone.id, approve: true })}
                               disabled={voteMutation.isPending}
-                              className="rounded-full px-5 py-2 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all flex items-center gap-1.5"
+                              className="flex-1 rounded-full py-2.5 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5"
                             >
-                              <CheckCircle size={16} weight="bold" />
-                              <span>Approve (2/3 Needed)</span>
+                              <CheckCircle size={15} weight="bold" />
+                              <span>Approve</span>
                             </button>
                             <button
                               onClick={() => voteMutation.mutate({ milestoneId: milestone.id, approve: false })}
                               disabled={voteMutation.isPending}
-                              className="rounded-full px-5 py-2 bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold text-xs hover:bg-rose-500/30 transition-all flex items-center gap-1.5"
+                              className="flex-1 rounded-full py-2.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold text-xs hover:bg-rose-500/30 transition-all flex items-center justify-center gap-1.5"
                             >
-                              <XCircle size={16} weight="bold" />
+                              <XCircle size={15} weight="bold" />
                               <span>Reject</span>
                             </button>
                           </>

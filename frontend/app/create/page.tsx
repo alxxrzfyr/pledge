@@ -162,8 +162,8 @@ export default function CreateProjectPage() {
             </div>
 
             {milestones.map((m, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div key={idx} className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xs font-mono font-bold text-white/40 w-5 shrink-0">#{idx + 1}</span>
                   <input
                     type="text"
@@ -175,12 +175,11 @@ export default function CreateProjectPage() {
                       updated[idx].desc = e.target.value;
                       setMilestones(updated);
                     }}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                    className="w-full min-w-0 bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none"
                   />
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 sm:w-32 flex items-center bg-black/40 border border-white/10 rounded-lg px-2.5">
+                <div className="flex items-center gap-2 pl-7">
+                  <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-lg px-2.5 min-w-0">
                     <input
                       type="number"
                       required
@@ -191,7 +190,7 @@ export default function CreateProjectPage() {
                         updated[idx].amount = e.target.value;
                         setMilestones(updated);
                       }}
-                      className="w-full bg-transparent py-1 text-xs font-mono text-emerald-400 focus:outline-none"
+                      className="w-full min-w-0 bg-transparent py-1.5 text-xs font-mono text-emerald-400 focus:outline-none"
                     />
                     <span className="text-[10px] text-white/40 font-mono shrink-0 ml-1">XLM</span>
                   </div>
