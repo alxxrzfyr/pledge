@@ -14,7 +14,7 @@ The frontend interface for **Pledge**, a decentralized public infrastructure fun
 - **Stellar & Soroban Integration:**
   - `@stellar/freighter-api` (Browser wallet connection and signing)
   - `@stellar/stellar-sdk` (Soroban transaction building, XDR parsing, RPC interaction)
-- **Off-Chain Proof Storage:** Pinata IPFS SDK (`pinata-web3`)
+- **Off-Chain Proof Hashing:** Native Web Crypto SHA-256 IPFS CIDs
 - **Iconography:** `@phosphor-icons/react`
 
 ---
@@ -79,15 +79,12 @@ Create a `.env.local` file in the `frontend` directory with the following variab
 
 ```env
 # Smart Contract Addresses (Deployed on Soroban Testnet)
-NEXT_PUBLIC_REGISTRY_CONTRACT_ID=CA...
-NEXT_PUBLIC_TREASURY_CONTRACT_ID=CB...
+NEXT_PUBLIC_REGISTRY_CONTRACT_ID=CCZES3TPZTDVUEX3BVZOL7MT2JDPNCVVK6TTG6N2NZQLBQQYEIJESRDQ
+NEXT_PUBLIC_TREASURY_CONTRACT_ID=CBTFXIKFJSAMNEKOLOMPFOHFUKG2NE3RYZTMRM63DAJB3TSFSN5U622H
 
 # Stellar / Soroban RPC Network Settings
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-
-# IPFS Pinata Configuration (Server-side)
-PINATA_JWT=your_pinata_jwt_token
 ```
 
 ---
