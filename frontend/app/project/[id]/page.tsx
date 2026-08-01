@@ -229,27 +229,27 @@ export default function ProjectDetailPage({
                       </span>
                       <h3 className="font-bold text-white text-sm sm:text-base leading-snug">{milestone.desc}</h3>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 pl-10">
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                       <span className="font-mono font-bold text-emerald-400 text-sm">
                         {milestone.amount}
                       </span>
                       {milestone.status === MilestoneState.Verified && (
-                        <span className="rounded-full px-3 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        <span className="rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           Verified & Released
                         </span>
                       )}
                       {milestone.status === MilestoneState.PendingVerification && (
-                        <span className="rounded-full px-3 py-1 text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
                           Pending ({milestone.approvals.length}/2 Approvals)
                         </span>
                       )}
                       {milestone.status === MilestoneState.PendingSubmission && (
-                        <span className="rounded-full px-3 py-1 text-xs font-medium bg-white/5 text-white/50 border border-white/10">
+                        <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-white/5 text-white/50 border border-white/10">
                           Awaiting Proof
                         </span>
                       )}
                       {milestone.status === MilestoneState.Rejected && (
-                        <span className="rounded-full px-3 py-1 text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                        <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
                           Rejected
                         </span>
                       )}

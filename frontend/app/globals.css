@@ -8,7 +8,13 @@
     --border-glass-bright: rgba(255, 255, 255, 0.2);
   }
 
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   html, body {
+    width: 100%;
     min-width: 320px;
     overflow-x: hidden;
   }
@@ -17,6 +23,10 @@
     background-color: var(--bg-oled);
     color: #f4f4f5;
     font-family: var(--font-jakarta), system-ui, sans-serif;
+  }
+
+  input, button, select, textarea {
+    max-width: 100%;
   }
 
   ::selection {
