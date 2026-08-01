@@ -36,6 +36,7 @@ export default function ProjectDetailPage({
   const [uploadingMilestoneId, setUploadingMilestoneId] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [txMessage, setTxMessage] = useState<string | null>(null);
+  const [activeEvidence, setActiveEvidence] = useState<{ cid: string; desc: string; amount: string } | null>(null);
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ["project", projectId],
@@ -266,21 +267,19 @@ export default function ProjectDetailPage({
 
                   {/* IPFS Proof CID */}
                   {milestone.proofCid && (
-                    <div className="bg-black/40 p-3.5 rounded-xl border border-white/5 flex items-center justify-between text-xs font-mono">
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className="text-emerald-400" />
-                        <span className="text-white/40">IPFS CID:</span>
-                        <span className="text-white/90">{milestone.proofCid}</span>
+                    <div className="bg-black/40 p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+                      <div className="flex items-center gap-2 overflow-hidden max-w-full">
+                        <FileText size={16} className="text-emerald-400 shrink-0" />
+                        <span className="text-white/40 shrink-0">IPFS CID:</span>
+                        <span className="text-white/90 truncate">{milestone.proofCid}</span>
                       </div>
-                      <a
-                        href={`https://gateway.pinata.cloud/ipfs/${milestone.proofCid}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-white hover:text-emerald-400 flex items-center gap-1 font-semibold transition-colors"
+                      <button
+                        onClick={() => setActiveEvidence({ cid: milestone.proofCid, desc: milestone.desc, amount: milestone.amount })}
+                        className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 font-semibold transition-colors shrink-0 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20"
                       >
-                        <span>View Evidence</span>
+                        <span>Inspect Evidence</span>
                         <ArrowUpRight size={14} />
-                      </a>
+                      </button>
                     </div>
                   )}
 
@@ -355,6 +354,71 @@ export default function ProjectDetailPage({
           })}
         </div>
       </section>
+
+      {/* Evidence Inspection Modal */}
+      {activeEvidence && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-50 flex items-center justify-center p-4">
+          <div className="p-2 bg-white/10 border border-white/20 rounded-[2rem] max-w-lg w-full text-left shadow-2xl">
+            <div className="bg-[#0a0a0d] rounded-[calc(2rem-0.5rem)] p-6 space-y-5 border border-white/10 relative">
+              <button
+                onClick={() => setActiveEvidence(null)}
+                className="absolute top-5 right-5 text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full border border-white/10"
+              >
+                <XCircle size={20} />
+              </button>
+
+              <div>
+                <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider mb-1">
+                  <ShieldCheck size={16} />
+                  <span>On-Chain Evidence Inspection</span>
+                </div>
+                <h3 className="text-lg font-bold text-white leading-snug">{activeEvidence.desc}</h3>
+                <p className="text-xs text-white/50 mt-1">Milestone Value: <span className="text-emerald-400 font-mono font-bold">{activeEvidence.amount}</span></p>
+              </div>
+
+              <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5 font-mono text-xs">
+                <div className="text-white/40 uppercase text-[10px] tracking-wider font-semibold">Cryptographic IPFS Address (CID)</div>
+                <div className="text-white font-bold break-all bg-black/50 p-2.5 rounded-lg border border-white/10 text-[11px]">
+                  {activeEvidence.cid}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-white/60 font-medium">Verified Gateway Resolution Links:</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <a
+                    href={`https://ipfs.io/ipfs/${activeEvidence.cid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center justify-between transition-colors"
+                  >
+                    <span>IPFS Public Gateway</span>
+                    <ArrowUpRight size={14} className="text-emerald-400" />
+                  </a>
+                  <a
+                    href={`https://dweb.link/ipfs/${activeEvidence.cid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white flex items-center justify-between transition-colors"
+                  >
+                    <span>DWeb Gateway</span>
+                    <ArrowUpRight size={14} className="text-emerald-400" />
+                  </a>
+                </div>
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  onClick={() => setActiveEvidence(null)}
+                  className="w-full py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-white/90 transition-colors"
+                >
+                  Close Inspection Window
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transaction Modal Overlay */}
       {txMessage && (
