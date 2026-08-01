@@ -5,9 +5,8 @@
   # PLEDGE
   ### Public Infrastructure Fund Tracker
 
-  *Pledge for every project: every fund tracked, every milestone verified.*
+  *Every project pledged, every fund tracked, every milestone verified.*
 
-  [![CI Pipeline](https://github.com/your-username/pledge/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
   [![Stellar Soroban](https://img.shields.io/badge/Stellar-Soroban_v22.0.0-emerald.svg)](https://soroban.stellar.org)
   [![Next.js 16](https://img.shields.io/badge/Next.js-16_App_Router-black.svg)](https://nextjs.org)
   [![Mobile Ready](https://img.shields.io/badge/Mobile-320px_Supported-blue.svg)](#mobile-responsive-ui)
@@ -16,52 +15,40 @@
 
 ---
 
-## Quick Links & Submission Materials
+## Overview
 
-- 🌐 **Live Application Demo:** [https://pledge-dapp.vercel.app](https://pledge-dapp.vercel.app) *(Replace with your live deployment URL)*
-- 📹 **Demo Video (1 to 2 minutes):** [Watch Demo Video on YouTube](https://youtube.com/watch?v=YOUR_VIDEO_ID) *(Replace with your demo video link)*
-- 📜 **Public GitHub Repository:** [https://github.com/your-username/pledge](https://github.com/your-username/pledge)
-
-### Soroban Testnet Contract Deployment
-- **Registry Contract Address:** `CA73G2P6XVL2XJ47Z6K4W7X9Y...` *(Replace with deployed Registry address)*
-- **Treasury Contract Address:** `CB84H3Q7YWM3YK58A7L5X8Z0Z...` *(Replace with deployed Treasury address)*
-- **Initialization Tx Hash:** `0x7a8f...` *(Replace with deployment transaction hash)*
-- **Milestone Release Tx Hash:** `0x9e2b...` *(Replace with milestone fund release transaction hash)*
+Pledge is a public, on-chain infrastructure fund tracker built on **Stellar (Soroban smart contracts)**. Public infrastructure projects are traditionally funded in tranches tied to construction milestones. Without transparent public verification, funds remain vulnerable to misuse, delays, or incomplete work. Pledge locks project funds in an escrow vault contract and releases them to contractors only upon independent 2-of-3 multisig verification of physical evidence pinned to IPFS.
 
 ---
 
-## Submission Checklist & Requirements Audit
+## Demo Links and Contract Addresses
 
-| Requirement / Item | Status | Repository Evidence / Reference |
-|---|---|---|
-| **Public GitHub Repository** | Complete | Main repository containing contracts, frontend, scripts, and CI/CD |
-| **Complete Documentation** | Complete | Detailed [`README.md`](file:///home/home/stellar-project/weee/README.md) and [`PRD.md`](file:///home/home/stellar-project/weee/PRD.md) |
-| **Minimum 10+ Commits** | Complete | 12 modular, step-by-step Git commits covering full architecture |
-| **Advanced Soroban Contracts** | Complete | [`contracts/registry`](file:///home/home/stellar-project/weee/contracts/registry/src/lib.rs) and [`contracts/treasury`](file:///home/home/stellar-project/weee/contracts/treasury/src/lib.rs) |
-| **Inter-Contract Communication** | Complete | Registry executes cross-contract invocation to `Treasury.release()` |
-| **2-of-3 Multisig Governance** | Complete | Milestone release requires 2 out of 3 independent verifier approvals |
-| **Event Streaming & Real-Time Updates** | Complete | Contracts emit `created`, `proof_sub`, `verified`, `released`, `flagged` events |
-| **No Mocks Integration** | Complete | Real SDK calls in [`frontend/lib/soroban.ts`](file:///home/home/stellar-project/weee/frontend/lib/soroban.ts) via `@stellar/stellar-sdk` and Freighter |
-| **CI/CD Pipeline Setup** | Complete | GitHub Actions workflow in [`.github/workflows/ci.yml`](file:///home/home/stellar-project/weee/.github/workflows/ci.yml) |
-| **Contract Deployment Workflow** | Complete | Testnet deployment script in [`scripts/deploy.sh`](file:///home/home/stellar-project/weee/scripts/deploy.sh) |
-| **Mobile Responsive UI (320px)** | Complete | Tested and optimized for 320px viewport width (e.g. iPhone SE) |
-| **3+ Passing Contract Tests** | Complete | Rust test suite passes 100% (3 passed, 0 failed) |
+### Live Links
+- **Live Application Demo:** [pledge-dapp.vercel.app](https://pledge-dapp.vercel.app) *(replace with live deployment URL)*
+- **Demo Video (1 to 2 minutes):** [View on YouTube](https://youtube.com/watch?v=YOUR_VIDEO_ID) *(replace with demo video link)*
+- **GitHub Repository:** [github.com/your-username/pledge](https://github.com/your-username/pledge)
+
+### Soroban Testnet Contract Deployments
+- **Registry Contract Address:** `CA73G2P6XVL2XJ47Z6K4W7X9Y...` *(replace with deployed Registry address)*
+- **Treasury Contract Address:** `CB84H3Q7YWM3YK58A7L5X8Z0Z...` *(replace with deployed Treasury address)*
+- **Initialization Tx Hash:** `0x7a8f...` *(replace with deployment transaction hash)*
+- **Milestone Release Tx Hash:** `0x9e2b...` *(replace with milestone fund release transaction hash)*
 
 ---
 
-## 🖼️ Media & Screenshot Evidence
+## Media & Screenshots
 
 ### 1. Mobile Responsive UI (320px Viewport)
 
 ![Pledge Mobile Responsive UI at 320px](docs/screenshots/mobile-ui-320px.png)
-*Placeholder: Capture a screenshot of the floating pill header, mobile drawer menu, and project cards on a 320px viewport (e.g. Chrome DevTools device mode at 320px).*
+*Placeholder: Capture a screenshot of the floating pill header, mobile drawer menu, and project cards on a 320px viewport.*
 
 ### 2. CI/CD Pipeline Execution
 
 ![CI/CD Pipeline Running](docs/screenshots/cicd-pipeline.png)
-*Placeholder: Capture a screenshot of the GitHub Actions run tab showing the passing `contracts` and `frontend` jobs.*
+*Placeholder: Capture a screenshot of the GitHub Actions run tab showing the passing contracts and frontend jobs.*
 
-### 3. Contract Test Suite Output (3+ Passing Tests)
+### 3. Contract Test Suite Output
 
 ![Soroban Contract Test Output](docs/screenshots/test-output.png)
 *Placeholder: Capture a screenshot of your terminal executing `cargo test --workspace`.*
