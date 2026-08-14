@@ -19,10 +19,23 @@ export const REGISTRY_CONTRACT_ID =
 export const TREASURY_CONTRACT_ID =
   process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ID || "";
 
+/**
+ * DEMO_MODE is true whenever no Registry contract is configured. In that
+ * case every "on-chain" action in this file operates purely on a local
+ * browser store and returns a synthetic transaction reference, and every
+ * caller-facing surface must make that fact visible to the user (see
+ * useWalletStore / Navbar demo-mode banner). This is the ONLY situation in
+ * which a synthetic result is returned; once a contract ID is configured,
+ * every function below propagates real RPC/contract errors to the caller
+ * instead of silently falling back to demo behavior.
+ */
+export const DEMO_MODE = !REGISTRY_CONTRACT_ID;
+
 export const server = new rpc.Server(SOROBAN_RPC_URL);
 
 /**
- * Local state persistence helpers for seamless demo & offline fallback execution
+ * Local state persistence helpers, used only in DEMO_MODE or as a read-through
+ * cache of on-chain data already fetched successfully via RPC.
  */
 const LOCAL_STORAGE_KEY = "pledge_projects_v2";
 let memoryProjects: Project[] | null = null;
@@ -86,79 +99,126 @@ function getSignedXdr(signRes: any): string {
 }
 
 /**
- * Fetch project details from Soroban RPC or local persistent store
+ * Submits a signed transaction and polls until it settles. Throws on any
+ * non-success terminal state instead of returning a placeholder result, so
+ * callers can never mistake a failed submission for a successful one.
+ */
+async function submitAndAwaitTransaction(
+  preparedTxXdr: string,
+  errorContext: string
+): Promise<string> {
+  const signRes = await signTransaction(preparedTxXdr, {
+    networkPassphrase: NETWORK_PASSPHRASE,
+  });
+  const signedXdr = getSignedXdr(signRes);
+
+  const sendRes = await server.sendTransaction(
+    TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE)
+  );
+
+  if (sendRes.status === "ERROR") {
+    const detail = (sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC rejected the transaction";
+    throw new Error(`${errorContext}: ${detail}`);
+  }
+
+  if (sendRes.status !== "PENDING") {
+    throw new Error(`${errorContext}: unexpected submission status "${sendRes.status}"`);
+  }
+
+  const POLL_INTERVAL_MS = 1000;
+  const MAX_POLL_ATTEMPTS = 30; // ~30s timeout waiting for the ledger to close
+  let getRes = await server.getTransaction(sendRes.hash);
+  let attempts = 0;
+
+  while (getRes.status === "NOT_FOUND" && attempts < MAX_POLL_ATTEMPTS) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    getRes = await server.getTransaction(sendRes.hash);
+    attempts += 1;
+  }
+
+  if (getRes.status === "NOT_FOUND") {
+    throw new Error(`${errorContext}: transaction not confirmed after ${MAX_POLL_ATTEMPTS}s, check hash ${sendRes.hash} manually`);
+  }
+
+  if (getRes.status === "FAILED") {
+    throw new Error(`${errorContext}: transaction failed during on-chain execution (hash ${sendRes.hash})`);
+  }
+
+  return sendRes.hash;
+}
+
+/**
+ * Fetch project details from Soroban RPC. Falls back to the local demo
+ * store only when DEMO_MODE is active; otherwise a real RPC failure is
+ * thrown so the UI can show an accurate error rather than stale mock data.
  */
 export async function getProjectById(id: number): Promise<Project> {
-  const localProjects = loadLocalProjects();
-  const localFound = localProjects.find((p) => p.id === id);
-
-  if (REGISTRY_CONTRACT_ID) {
-    try {
-      const tx = await server.getContractData(
-        REGISTRY_CONTRACT_ID,
-        xdr.ScVal.scvVec([
-          xdr.ScVal.scvSymbol("Project"),
-          xdr.ScVal.scvU32(id),
-        ]),
-        "persistent" as any
-      );
-
-      if (tx && (tx as any).val) {
-        const val = (tx as any).val.contractData ? (tx as any).val.contractData().val() : (tx as any).val;
-        const native = scValToNative(val as xdr.ScVal);
-        return parseProjectNative(native);
-      }
-    } catch (err) {
-      console.warn(`RPC fetch for project ${id} failed, returning local store fallback:`, err);
-    }
+  if (DEMO_MODE) {
+    const localFound = loadLocalProjects().find((p) => p.id === id);
+    if (localFound) return localFound;
+    throw new Error(`Project ${id} not found in local demo store`);
   }
 
-  if (localFound) return localFound;
-  throw new Error(`Project ${id} not found`);
+  const tx = await server.getContractData(
+    REGISTRY_CONTRACT_ID,
+    xdr.ScVal.scvVec([
+      xdr.ScVal.scvSymbol("Project"),
+      xdr.ScVal.scvU32(id),
+    ]),
+    "persistent" as any
+  );
+
+  if (!tx || !(tx as any).val) {
+    throw new Error(`Project ${id} not found on Registry contract`);
+  }
+
+  const val = (tx as any).val.contractData ? (tx as any).val.contractData().val() : (tx as any).val;
+  const native = scValToNative(val as xdr.ScVal);
+  return parseProjectNative(native);
 }
 
 /**
- * Fetch all projects list from Soroban RPC or local persistent store
+ * Fetch all projects. In DEMO_MODE, reads from the local store only. In
+ * live mode, reads the on-chain project count and fetches each project by
+ * ID; a failure fetching the count is a real error, not a silent fallback.
  */
 export async function getAllProjects(): Promise<Project[]> {
-  const localProjects = loadLocalProjects();
-  const rpcProjects: Project[] = [];
+  if (DEMO_MODE) {
+    return [...loadLocalProjects()].sort((a, b) => b.id - a.id);
+  }
 
-  if (REGISTRY_CONTRACT_ID) {
+  const countTx = await server.getContractData(
+    REGISTRY_CONTRACT_ID,
+    xdr.ScVal.scvSymbol("ProjectCount"),
+    "instance" as any
+  );
+
+  if (!countTx || !(countTx as any).val) {
+    throw new Error("Unable to read project count from Registry contract");
+  }
+
+  const val = (countTx as any).val.contractData ? (countTx as any).val.contractData().val() : (countTx as any).val;
+  const count = scValToNative(val as xdr.ScVal) as number;
+
+  const projects: Project[] = [];
+  for (let i = 1; i <= count; i++) {
     try {
-      const countTx = await server.getContractData(
-        REGISTRY_CONTRACT_ID,
-        xdr.ScVal.scvSymbol("ProjectCount"),
-        "instance" as any
-      );
-
-      if (countTx && (countTx as any).val) {
-        const val = (countTx as any).val.contractData ? (countTx as any).val.contractData().val() : (countTx as any).val;
-        const count = scValToNative(val as xdr.ScVal) as number;
-        for (let i = 1; i <= count; i++) {
-          try {
-            const proj = await getProjectById(i);
-            rpcProjects.push(proj);
-          } catch (e) {
-            console.error(`Failed loading project ${i}`, e);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("RPC fetch for all projects failed, using local persistent store:", err);
+      projects.push(await getProjectById(i));
+    } catch (e) {
+      // A single missing/corrupt project shouldn't fail the whole list,
+      // but it is logged loudly rather than silently dropped.
+      console.error(`Failed loading project ${i} from Registry contract:`, e);
     }
   }
 
-  // Merge RPC projects with local persistent projects
-  const combinedMap = new Map<number, Project>();
-  localProjects.forEach((p) => combinedMap.set(p.id, p));
-  rpcProjects.forEach((p) => combinedMap.set(p.id, p));
-
-  return Array.from(combinedMap.values()).sort((a, b) => b.id - a.id);
+  return projects.sort((a, b) => b.id - a.id);
 }
 
 /**
- * Real Soroban Contract Invocation + Local Store Sync: Create Project
+ * Create a project on-chain via the Registry contract's create_project
+ * function. In DEMO_MODE, mutates the local store and returns a synthetic
+ * reference clearly not tied to any real ledger. In live mode, any failure
+ * (build, sign, submit, or on-chain execution) is thrown to the caller.
  */
 export async function createProjectOnChain(
   funder: string,
@@ -169,79 +229,49 @@ export async function createProjectOnChain(
   milestonesAmounts: number[],
   tokenAddress: string
 ): Promise<string> {
-  let txHash = "0x7a8f89c4b12e4f0129a87bc9123456789abcdef0123456789abcdef012345678";
+  let txHash: string;
 
-  if (REGISTRY_CONTRACT_ID) {
-    try {
-      const verifiersScVal = xdr.ScVal.scvVec(
-        verifiers.map((v) => new Address(v).toScVal())
-      );
-      const descScVal = xdr.ScVal.scvVec(
-        milestonesDesc.map((d) => nativeToScVal(d))
-      );
-      const amountsScVal = xdr.ScVal.scvVec(
-        milestonesAmounts.map((a) => nativeToScVal(BigInt(a), { type: "i128" }))
-      );
-
-      const contract = new Contract(REGISTRY_CONTRACT_ID);
-      const account = await server.getAccount(funder);
-
-      const tx = new TransactionBuilder(account, {
-        fee: "100000",
-        networkPassphrase: NETWORK_PASSPHRASE,
-      })
-        .addOperation(
-          contract.call(
-            "create_project",
-            new Address(funder).toScVal(),
-            nativeToScVal(name),
-            new Address(contractor).toScVal(),
-            verifiersScVal,
-            descScVal,
-            amountsScVal,
-            new Address(tokenAddress).toScVal()
-          )
-        )
-        .setTimeout(30)
-        .build();
-
-      const preparedTx = await server.prepareTransaction(tx);
-      const signRes = await signTransaction(preparedTx.toXDR(), {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-
-      const signedXdr = getSignedXdr(signRes);
-      const sendRes = await server.sendTransaction(
-        TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE)
-      );
-
-      if (sendRes.status === "ERROR") {
-        throw new Error(`Soroban transaction submission error: ${(sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC Error"}`);
-      }
-
-      if (sendRes.status === "PENDING") {
-        let getRes = await server.getTransaction(sendRes.hash);
-        while (getRes.status === "NOT_FOUND") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          getRes = await server.getTransaction(sendRes.hash);
-        }
-        if (getRes.status === "FAILED") {
-          throw new Error("Soroban transaction failed during execution on-chain");
-        }
-        txHash = sendRes.hash;
-      }
-    } catch (err: any) {
-      console.warn("Real RPC transaction failed, executing fallback sync:", err);
-      // If user signed or intended real transaction, propagate error if critical
-      if (err.message && (err.message.includes("User canceled") || err.message.includes("Balance insufficient") || err.message.includes("declined"))) {
-        throw err;
-      }
-    }
+  if (DEMO_MODE) {
+    txHash = `demo-${crypto.randomUUID()}`;
   } else {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const verifiersScVal = xdr.ScVal.scvVec(
+      verifiers.map((v) => new Address(v).toScVal())
+    );
+    const descScVal = xdr.ScVal.scvVec(
+      milestonesDesc.map((d) => nativeToScVal(d))
+    );
+    const amountsScVal = xdr.ScVal.scvVec(
+      milestonesAmounts.map((a) => nativeToScVal(BigInt(a), { type: "i128" }))
+    );
+
+    const contract = new Contract(REGISTRY_CONTRACT_ID);
+    const account = await server.getAccount(funder);
+
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "create_project",
+          new Address(funder).toScVal(),
+          nativeToScVal(name),
+          new Address(contractor).toScVal(),
+          verifiersScVal,
+          descScVal,
+          amountsScVal,
+          new Address(tokenAddress).toScVal()
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const preparedTx = await server.prepareTransaction(tx);
+    txHash = await submitAndAwaitTransaction(preparedTx.toXDR(), "Project creation failed");
   }
 
-  // Mutate local state store so the new project immediately appears
+  // Mirror the result into the local store so the UI reflects it immediately,
+  // even in live mode (acts as a read-through cache pending the next RPC sync).
   const projects = loadLocalProjects();
   const newId = projects.length > 0 ? Math.max(...projects.map((p) => p.id)) + 1 : 1;
 
@@ -283,7 +313,9 @@ export async function createProjectOnChain(
 }
 
 /**
- * Real Soroban Contract Invocation + Local Store Sync: Submit Proof
+ * Submit proof for a milestone via the Registry contract's submit_proof
+ * function. Same DEMO_MODE / live-mode error-propagation contract as
+ * createProjectOnChain above.
  */
 export async function submitProofOnChain(
   contractor: string,
@@ -293,65 +325,34 @@ export async function submitProofOnChain(
   fileName?: string,
   dataUrl?: string
 ): Promise<string> {
-  let txHash = "0x9e2b456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  let txHash: string;
 
-  if (REGISTRY_CONTRACT_ID) {
-    try {
-      const contract = new Contract(REGISTRY_CONTRACT_ID);
-      const account = await server.getAccount(contractor);
-
-      const tx = new TransactionBuilder(account, {
-        fee: "100000",
-        networkPassphrase: NETWORK_PASSPHRASE,
-      })
-        .addOperation(
-          contract.call(
-            "submit_proof",
-            new Address(contractor).toScVal(),
-            xdr.ScVal.scvU32(projectId),
-            xdr.ScVal.scvU32(milestoneId),
-            nativeToScVal(evidenceIpfsCid)
-          )
-        )
-        .setTimeout(30)
-        .build();
-
-      const preparedTx = await server.prepareTransaction(tx);
-      const signRes = await signTransaction(preparedTx.toXDR(), {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-
-      const signedXdr = getSignedXdr(signRes);
-      const sendRes = await server.sendTransaction(
-        TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE)
-      );
-
-      if (sendRes.status === "ERROR") {
-        throw new Error(`Proof submission error: ${(sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC Error"}`);
-      }
-
-      if (sendRes.status === "PENDING") {
-        let getRes = await server.getTransaction(sendRes.hash);
-        while (getRes.status === "NOT_FOUND") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          getRes = await server.getTransaction(sendRes.hash);
-        }
-        if (getRes.status === "FAILED") {
-          throw new Error("Proof submission transaction failed during execution on-chain");
-        }
-        txHash = sendRes.hash;
-      }
-    } catch (err: any) {
-      console.warn("Real proof submission RPC failed, executing fallback sync:", err);
-      if (err.message && (err.message.includes("User canceled") || err.message.includes("declined"))) {
-        throw err;
-      }
-    }
+  if (DEMO_MODE) {
+    txHash = `demo-${crypto.randomUUID()}`;
   } else {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const contract = new Contract(REGISTRY_CONTRACT_ID);
+    const account = await server.getAccount(contractor);
+
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "submit_proof",
+          new Address(contractor).toScVal(),
+          xdr.ScVal.scvU32(projectId),
+          xdr.ScVal.scvU32(milestoneId),
+          nativeToScVal(evidenceIpfsCid)
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const preparedTx = await server.prepareTransaction(tx);
+    txHash = await submitAndAwaitTransaction(preparedTx.toXDR(), "Proof submission failed");
   }
 
-  // Mutate local state store
   const projects = loadLocalProjects();
   const proj = projects.find((p) => p.id === projectId);
   if (proj) {
@@ -372,7 +373,9 @@ export async function submitProofOnChain(
 }
 
 /**
- * Real Soroban Contract Invocation + Local Store Sync: Verify Milestone Vote (Approve / Reject)
+ * Cast an approve/reject vote on a milestone via the Registry contract's
+ * verify_milestone function. Same DEMO_MODE / live-mode error-propagation
+ * contract as createProjectOnChain above.
  */
 export async function verifyMilestoneOnChain(
   verifier: string,
@@ -380,65 +383,34 @@ export async function verifyMilestoneOnChain(
   milestoneId: number,
   approve: boolean
 ): Promise<string> {
-  let txHash = "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b";
+  let txHash: string;
 
-  if (REGISTRY_CONTRACT_ID) {
-    try {
-      const contract = new Contract(REGISTRY_CONTRACT_ID);
-      const account = await server.getAccount(verifier);
-
-      const tx = new TransactionBuilder(account, {
-        fee: "100000",
-        networkPassphrase: NETWORK_PASSPHRASE,
-      })
-        .addOperation(
-          contract.call(
-            "verify_milestone",
-            new Address(verifier).toScVal(),
-            xdr.ScVal.scvU32(projectId),
-            xdr.ScVal.scvU32(milestoneId),
-            xdr.ScVal.scvBool(approve)
-          )
-        )
-        .setTimeout(30)
-        .build();
-
-      const preparedTx = await server.prepareTransaction(tx);
-      const signRes = await signTransaction(preparedTx.toXDR(), {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-
-      const signedXdr = getSignedXdr(signRes);
-      const sendRes = await server.sendTransaction(
-        TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE)
-      );
-
-      if (sendRes.status === "ERROR") {
-        throw new Error(`Milestone verification error: ${(sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC Error"}`);
-      }
-
-      if (sendRes.status === "PENDING") {
-        let getRes = await server.getTransaction(sendRes.hash);
-        while (getRes.status === "NOT_FOUND") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          getRes = await server.getTransaction(sendRes.hash);
-        }
-        if (getRes.status === "FAILED") {
-          throw new Error("Milestone verification transaction failed during execution on-chain");
-        }
-        txHash = sendRes.hash;
-      }
-    } catch (err: any) {
-      console.warn("Real milestone verification RPC failed, executing fallback sync:", err);
-      if (err.message && (err.message.includes("User canceled") || err.message.includes("declined"))) {
-        throw err;
-      }
-    }
+  if (DEMO_MODE) {
+    txHash = `demo-${crypto.randomUUID()}`;
   } else {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const contract = new Contract(REGISTRY_CONTRACT_ID);
+    const account = await server.getAccount(verifier);
+
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "verify_milestone",
+          new Address(verifier).toScVal(),
+          xdr.ScVal.scvU32(projectId),
+          xdr.ScVal.scvU32(milestoneId),
+          xdr.ScVal.scvBool(approve)
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const preparedTx = await server.prepareTransaction(tx);
+    txHash = await submitAndAwaitTransaction(preparedTx.toXDR(), "Milestone verification failed");
   }
 
-  // Mutate local state store
   const projects = loadLocalProjects();
   const proj = projects.find((p) => p.id === projectId);
   if (proj) {
@@ -476,69 +448,40 @@ export async function verifyMilestoneOnChain(
 }
 
 /**
- * Real Soroban Contract Invocation + Local Store Sync: Flag Project
+ * Flag a project for public audit via the Registry contract's
+ * flag_project function. Same DEMO_MODE / live-mode error-propagation
+ * contract as createProjectOnChain above.
  */
 export async function flagProjectOnChain(
   caller: string,
   projectId: number
 ): Promise<string> {
-  let txHash = "0x3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e";
+  let txHash: string;
 
-  if (REGISTRY_CONTRACT_ID) {
-    try {
-      const contract = new Contract(REGISTRY_CONTRACT_ID);
-      const account = await server.getAccount(caller);
-
-      const tx = new TransactionBuilder(account, {
-        fee: "100000",
-        networkPassphrase: NETWORK_PASSPHRASE,
-      })
-        .addOperation(
-          contract.call(
-            "flag_project",
-            new Address(caller).toScVal(),
-            xdr.ScVal.scvU32(projectId)
-          )
-        )
-        .setTimeout(30)
-        .build();
-
-      const preparedTx = await server.prepareTransaction(tx);
-      const signRes = await signTransaction(preparedTx.toXDR(), {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-
-      const signedXdr = getSignedXdr(signRes);
-      const sendRes = await server.sendTransaction(
-        TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE)
-      );
-
-      if (sendRes.status === "ERROR") {
-        throw new Error(`Flagging project error: ${(sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC Error"}`);
-      }
-
-      if (sendRes.status === "PENDING") {
-        let getRes = await server.getTransaction(sendRes.hash);
-        while (getRes.status === "NOT_FOUND") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          getRes = await server.getTransaction(sendRes.hash);
-        }
-        if (getRes.status === "FAILED") {
-          throw new Error("Project flag transaction failed during execution on-chain");
-        }
-        txHash = sendRes.hash;
-      }
-    } catch (err: any) {
-      console.warn("Real flagging RPC failed, executing fallback sync:", err);
-      if (err.message && (err.message.includes("User canceled") || err.message.includes("declined"))) {
-        throw err;
-      }
-    }
+  if (DEMO_MODE) {
+    txHash = `demo-${crypto.randomUUID()}`;
   } else {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const contract = new Contract(REGISTRY_CONTRACT_ID);
+    const account = await server.getAccount(caller);
+
+    const tx = new TransactionBuilder(account, {
+      fee: "100000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "flag_project",
+          new Address(caller).toScVal(),
+          xdr.ScVal.scvU32(projectId)
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const preparedTx = await server.prepareTransaction(tx);
+    txHash = await submitAndAwaitTransaction(preparedTx.toXDR(), "Flagging project failed");
   }
 
-  // Mutate local state store
   const projects = loadLocalProjects();
   const proj = projects.find((p) => p.id === projectId);
   if (proj) {

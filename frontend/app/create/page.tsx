@@ -44,6 +44,21 @@ export default function CreateProjectPage() {
       return;
     }
 
+    const trimmedVerifiers = verifiers.map((v) => v.trim());
+    const uniqueVerifiers = new Set(trimmedVerifiers.map((v) => v.toLowerCase()));
+    if (uniqueVerifiers.size !== trimmedVerifiers.length) {
+      setStatusMsg("Error: verifier addresses must be distinct. You entered a duplicate.");
+      return;
+    }
+
+    const restrictedAddresses = new Set(
+      [address, contractor.trim()].map((a) => a.toLowerCase())
+    );
+    if (trimmedVerifiers.some((v) => restrictedAddresses.has(v.toLowerCase()))) {
+      setStatusMsg("Error: the funder and contractor cannot also be listed as verifiers.");
+      return;
+    }
+
     setIsSubmitting(true);
     setStatusMsg("Building atomic escrow transaction on Soroban...");
 
