@@ -28,7 +28,6 @@ describe("useWalletStore", () => {
     resetStore();
     vi.clearAllMocks();
     // window is defined by jsdom, so simulate the extension being absent by default.
-    // @ts-expect-error test-only stub
     delete (window as any).freighter;
   });
 
