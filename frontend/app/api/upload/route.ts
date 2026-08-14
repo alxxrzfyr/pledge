@@ -47,14 +47,18 @@ export async function POST(request: Request) {
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return NextResponse.json(
-      { success: false, error: `File exceeds maximum size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB` },
+      {
+        success: false,
+        error: `File exceeds maximum size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`,
+      },
       { status: 413 }
     );
   }
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const mimeType = file.type || (file.name.endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
+  const mimeType =
+    file.type || (file.name.endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
 
   if (!IPFS_PINNING_ENABLED) {
     // Demo mode: no pinning provider configured. Be explicit about this

@@ -16,10 +16,8 @@ export const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
 export const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "Test SDF Network ; September 2015";
-export const REGISTRY_CONTRACT_ID =
-  process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ID || "";
-export const TREASURY_CONTRACT_ID =
-  process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ID || "";
+export const REGISTRY_CONTRACT_ID = process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ID || "";
+export const TREASURY_CONTRACT_ID = process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ID || "";
 
 /**
  * Contract address of the native XLM Stellar Asset Contract on Testnet.
@@ -149,7 +147,11 @@ function getSignedXdr(signRes: any): string {
  * stuck on a loading state with no error. This guarantees a rejection
  * instead of an infinite wait.
  */
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
     promise.then(
@@ -188,7 +190,10 @@ async function submitAndAwaitTransaction(
   );
 
   if (sendRes.status === "ERROR") {
-    const detail = (sendRes as any).errorResultXdr || (sendRes as any).errorResult || "RPC rejected the transaction";
+    const detail =
+      (sendRes as any).errorResultXdr ||
+      (sendRes as any).errorResult ||
+      "RPC rejected the transaction";
     throw new Error(`${errorContext}: ${detail}`);
   }
 
@@ -208,11 +213,15 @@ async function submitAndAwaitTransaction(
   }
 
   if (getRes.status === "NOT_FOUND") {
-    throw new Error(`${errorContext}: transaction not confirmed after ${MAX_POLL_ATTEMPTS}s, check hash ${sendRes.hash} manually`);
+    throw new Error(
+      `${errorContext}: transaction not confirmed after ${MAX_POLL_ATTEMPTS}s, check hash ${sendRes.hash} manually`
+    );
   }
 
   if (getRes.status === "FAILED") {
-    throw new Error(`${errorContext}: transaction failed during on-chain execution (hash ${sendRes.hash})`);
+    throw new Error(
+      `${errorContext}: transaction failed during on-chain execution (hash ${sendRes.hash})`
+    );
   }
 
   return sendRes.hash;
@@ -399,12 +408,8 @@ export async function createProjectOnChain(
       );
     }
 
-    const verifiersScVal = xdr.ScVal.scvVec(
-      verifierAddrs.map((v) => new Address(v).toScVal())
-    );
-    const descScVal = xdr.ScVal.scvVec(
-      descriptions.map((d) => nativeToScVal(d))
-    );
+    const verifiersScVal = xdr.ScVal.scvVec(verifierAddrs.map((v) => new Address(v).toScVal()));
+    const descScVal = xdr.ScVal.scvVec(descriptions.map((d) => nativeToScVal(d)));
     const amountsScVal = xdr.ScVal.scvVec(
       milestonesAmounts.map((a) => nativeToScVal(BigInt(a), { type: "i128" }))
     );
@@ -638,10 +643,7 @@ export async function verifyMilestoneOnChain(
  * flag_project function. Same DEMO_MODE / live-mode error-propagation
  * contract as createProjectOnChain above.
  */
-export async function flagProjectOnChain(
-  caller: string,
-  projectId: number
-): Promise<string> {
+export async function flagProjectOnChain(caller: string, projectId: number): Promise<string> {
   let txHash: string;
 
   if (DEMO_MODE) {
@@ -655,11 +657,7 @@ export async function flagProjectOnChain(
       networkPassphrase: NETWORK_PASSPHRASE,
     })
       .addOperation(
-        contract.call(
-          "flag_project",
-          new Address(caller).toScVal(),
-          xdr.ScVal.scvU32(projectId)
-        )
+        contract.call("flag_project", new Address(caller).toScVal(), xdr.ScVal.scvU32(projectId))
       )
       .setTimeout(30)
       .build();

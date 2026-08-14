@@ -18,12 +18,7 @@ export function PledgeLogo({ size = 28, className = "" }: { size?: number; class
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path
-        d="M8 6V26"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
+      <path d="M8 6V26" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx="20" cy="14" r="2.5" fill="currentColor" />
     </svg>
   );

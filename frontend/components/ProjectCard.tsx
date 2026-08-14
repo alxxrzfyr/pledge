@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { Project, ProjectState, MilestoneState } from "@/lib/types";
-import { ArrowUpRight, ShieldCheck, Vault, Clock, CheckCircle, Warning } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowUpRight,
+  ShieldCheck,
+  Vault,
+  Clock,
+  CheckCircle,
+  Warning,
+} from "@phosphor-icons/react/dist/ssr";
 
 interface ProjectCardProps {
   project: Project;
@@ -44,7 +51,9 @@ export function ProjectCard({ project, className = "" }: ProjectCardProps) {
   };
 
   return (
-    <div className={`p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[1.8rem] sm:rounded-[2.2rem] ambient-glow transition-all duration-700 ease-fluid group ${className}`}>
+    <div
+      className={`p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[1.8rem] sm:rounded-[2.2rem] ambient-glow transition-all duration-700 ease-fluid group ${className}`}
+    >
       {/* Inner Core */}
       <div className="bg-[#09090d] rounded-[calc(1.8rem-0.4rem)] sm:rounded-[calc(2.2rem-0.5rem)] p-4 sm:p-6 space-y-4 sm:space-y-5 inner-bezel-shadow border border-white/5 flex flex-col justify-between h-full">
         <div>
@@ -64,15 +73,11 @@ export function ProjectCard({ project, className = "" }: ProjectCardProps) {
           {/* Addresses Meta Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-black/40 p-3 rounded-2xl border border-white/5 mb-4">
             <div className="min-w-0">
-              <span className="text-[11px] text-white/40 font-medium block mb-0.5">
-                Funder
-              </span>
+              <span className="text-[11px] text-white/40 font-medium block mb-0.5">Funder</span>
               <span className="font-mono text-white/80 block truncate">{project.lgu}</span>
             </div>
             <div className="min-w-0">
-              <span className="text-[11px] text-white/40 font-medium block mb-0.5">
-                Contractor
-              </span>
+              <span className="text-[11px] text-white/40 font-medium block mb-0.5">Contractor</span>
               <span className="font-mono text-white/80 block truncate">{project.contractor}</span>
             </div>
           </div>

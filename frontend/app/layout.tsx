@@ -7,8 +7,7 @@ import { DemoModeBanner } from "@/components/DemoModeBanner";
 
 export const metadata: Metadata = {
   title: "Pledge — Public Infrastructure Fund Tracker",
-  description:
-    "Verifiable infrastructure escrow smart contracts powered by Stellar Soroban.",
+  description: "Verifiable infrastructure escrow smart contracts powered by Stellar Soroban.",
 };
 
 export default function RootLayout({

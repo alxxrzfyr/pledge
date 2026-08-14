@@ -10,9 +10,7 @@ export function Footer() {
             <PledgeLogo size={20} />
           </div>
           <div>
-            <p className="font-bold text-white tracking-tight text-sm">
-              Pledge Protocol
-            </p>
+            <p className="font-bold text-white tracking-tight text-sm">Pledge Protocol</p>
             <p className="text-white/50 text-xs">
               Every peso tracked, every milestone verified on Stellar Soroban smart contracts.
             </p>
@@ -27,7 +25,10 @@ export function Footer() {
             className="flex items-center gap-1 hover:text-white transition-colors group"
           >
             <span>Soroban Network</span>
-            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <ArrowUpRight
+              size={14}
+              className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+            />
           </a>
           <a
             href="https://freighter.app"
@@ -36,7 +37,10 @@ export function Footer() {
             className="flex items-center gap-1 hover:text-white transition-colors group"
           >
             <span>Freighter Wallet</span>
-            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <ArrowUpRight
+              size={14}
+              className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+            />
           </a>
         </div>
       </div>

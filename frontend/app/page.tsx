@@ -71,7 +71,8 @@ export default function HomePage() {
             </h1>
 
             <p className="text-white/70 text-xs sm:text-base leading-relaxed max-w-[55ch]">
-              Public infrastructure fund tracker on Stellar Soroban. Funds remain escrowed and only release upon 2-of-3 independent verification of physical work proof.
+              Public infrastructure fund tracker on Stellar Soroban. Funds remain escrowed and only
+              release upon 2-of-3 independent verification of physical work proof.
             </p>
 
             <div className="pt-1 sm:pt-2 flex items-center gap-3 flex-wrap">
@@ -93,28 +94,36 @@ export default function HomePage() {
               <span className="text-[11px] sm:text-xs text-white/50 font-medium block mb-0.5 sm:mb-1 truncate">
                 Tracked Projects
               </span>
-              <span className="text-lg sm:text-2xl font-extrabold font-mono text-white">{stats.totalProjects}</span>
+              <span className="text-lg sm:text-2xl font-extrabold font-mono text-white">
+                {stats.totalProjects}
+              </span>
             </div>
 
             <div className="bg-white/5 p-2.5 sm:p-4 rounded-2xl border border-white/5">
               <span className="text-[11px] sm:text-xs text-white/50 font-medium block mb-0.5 sm:mb-1 truncate">
                 Fully Released
               </span>
-              <span className="text-lg sm:text-2xl font-extrabold font-mono text-emerald-400">{stats.completedProjects}</span>
+              <span className="text-lg sm:text-2xl font-extrabold font-mono text-emerald-400">
+                {stats.completedProjects}
+              </span>
             </div>
 
             <div className="bg-white/5 p-2.5 sm:p-4 rounded-2xl border border-white/5">
               <span className="text-[11px] sm:text-xs text-white/50 font-medium block mb-0.5 sm:mb-1 truncate">
                 Citizen Flags
               </span>
-              <span className="text-lg sm:text-2xl font-extrabold font-mono text-rose-400">{stats.totalFlags}</span>
+              <span className="text-lg sm:text-2xl font-extrabold font-mono text-rose-400">
+                {stats.totalFlags}
+              </span>
             </div>
 
             <div className="bg-white/5 p-2.5 sm:p-4 rounded-2xl border border-white/5">
               <span className="text-[11px] sm:text-xs text-white/50 font-medium block mb-0.5 sm:mb-1 truncate">
                 Multisig Threshold
               </span>
-              <span className="text-lg sm:text-2xl font-extrabold font-mono text-white">2-of-3</span>
+              <span className="text-lg sm:text-2xl font-extrabold font-mono text-white">
+                2-of-3
+              </span>
             </div>
           </div>
         </div>
@@ -174,16 +183,16 @@ export default function HomePage() {
             if (idx === 0 && filteredProjects.length > 1) colSpan = "md:col-span-8";
             else if (idx === 1 && filteredProjects.length > 1) colSpan = "md:col-span-4";
 
-            return (
-              <ProjectCard key={project.id} project={project} className={colSpan} />
-            );
+            return <ProjectCard key={project.id} project={project} className={colSpan} />;
           })}
         </div>
       ) : (
         <div className="p-2 bg-white/5 border border-white/10 rounded-[2rem] max-w-md mx-auto text-center">
           <div className="bg-[#0a0a0d] rounded-[calc(2rem-0.5rem)] p-8 space-y-2 border border-white/5">
             <p className="text-white font-semibold">No matching projects found</p>
-            <p className="text-xs text-white/50">Try adjusting your search terms or active filters.</p>
+            <p className="text-xs text-white/50">
+              Try adjusting your search terms or active filters.
+            </p>
           </div>
         </div>
       )}

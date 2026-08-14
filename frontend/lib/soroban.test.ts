@@ -69,9 +69,8 @@ const sdkMocks = vi.hoisted(() => {
 // implementation is used rather than a mock. Mocking it would defeat the
 // purpose of the address-validation tests below.
 vi.mock("@stellar/stellar-sdk", async () => {
-  const actual = await vi.importActual<typeof import("@stellar/stellar-sdk")>(
-    "@stellar/stellar-sdk"
-  );
+  const actual =
+    await vi.importActual<typeof import("@stellar/stellar-sdk")>("@stellar/stellar-sdk");
   return {
     rpc: {
       Server: sdkMocks.ServerCtor,
@@ -238,9 +237,7 @@ describe("lib/soroban", () => {
       });
       freighterMocks.signTransaction.mockRejectedValue(new Error("User declined access"));
 
-      await expect(
-        soroban.flagProjectOnChain(CITIZEN, 1)
-      ).rejects.toThrow(/declined/);
+      await expect(soroban.flagProjectOnChain(CITIZEN, 1)).rejects.toThrow(/declined/);
 
       // Local demo store must not have been mutated by a failed live-mode call.
       expect(sdkMocks.serverInstance.sendTransaction).not.toHaveBeenCalled();

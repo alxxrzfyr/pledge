@@ -40,11 +40,7 @@ function useIsClient() {
   );
 }
 
-export default function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const projectId = parseInt(id, 10);
   const queryClient = useQueryClient();
@@ -59,7 +55,11 @@ export default function ProjectDetailPage({
 
   const activeAddress = address || "";
 
-  const { data: project, isLoading, error } = useQuery({
+  const {
+    data: project,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => getProjectById(projectId),
     enabled: isClient,
@@ -79,7 +79,9 @@ export default function ProjectDetailPage({
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Upload failed");
 
-      setTxMessage(`Evidence pinned to IPFS (${data.cid.slice(0, 14)}...). Recording on Soroban...`);
+      setTxMessage(
+        `Evidence pinned to IPFS (${data.cid.slice(0, 14)}...). Recording on Soroban...`
+      );
       await submitProofOnChain(
         activeAddress,
         projectId,
@@ -106,7 +108,9 @@ export default function ProjectDetailPage({
 
   const voteMutation = useMutation({
     mutationFn: async ({ milestoneId, approve }: { milestoneId: number; approve: boolean }) => {
-      setTxMessage(`Signing ${approve ? "Approve" : "Reject"} vote via Freighter (${activeAddress.slice(0, 8)}...)...`);
+      setTxMessage(
+        `Signing ${approve ? "Approve" : "Reject"} vote via Freighter (${activeAddress.slice(0, 8)}...)...`
+      );
       await verifyMilestoneOnChain(activeAddress, projectId, milestoneId, approve);
     },
     onSuccess: () => {
@@ -152,13 +156,17 @@ export default function ProjectDetailPage({
       <div className="p-2 bg-white/5 border border-white/10 rounded-[2rem] max-w-md mx-auto text-center">
         <div className="bg-[#0a0a0d] rounded-[calc(2rem-0.5rem)] p-8 space-y-2 border border-white/5">
           <h2 className="text-lg font-bold text-white">Project Not Found</h2>
-          <p className="text-xs text-white/50">Requested project ID does not exist on Soroban Registry.</p>
+          <p className="text-xs text-white/50">
+            Requested project ID does not exist on Soroban Registry.
+          </p>
         </div>
       </div>
     );
   }
 
-  const isContractor = Boolean(activeAddress && activeAddress.toLowerCase() === project.contractor.toLowerCase());
+  const isContractor = Boolean(
+    activeAddress && activeAddress.toLowerCase() === project.contractor.toLowerCase()
+  );
   const isVerifier = Boolean(
     activeAddress && project.verifiers.some((v) => v.toLowerCase() === activeAddress.toLowerCase())
   );
@@ -219,11 +227,15 @@ export default function ProjectDetailPage({
             </div>
             <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5">
               <span className="text-xs text-white/40 block mb-1 font-medium">LGU Funder</span>
-              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">{project.lgu}</span>
+              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">
+                {project.lgu}
+              </span>
             </div>
             <div className="bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/5">
               <span className="text-xs text-white/40 block mb-1 font-medium">Contractor</span>
-              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">{project.contractor}</span>
+              <span className="font-mono text-white/80 block truncate text-[11px] sm:text-xs">
+                {project.contractor}
+              </span>
             </div>
           </div>
 
@@ -244,8 +256,14 @@ export default function ProjectDetailPage({
                         : "bg-white/5 border-white/5 text-white/80"
                     }`}
                   >
-                    <span className="truncate">v{idx + 1}: {ver}</span>
-                    {isActive && <span className="text-[10px] uppercase font-bold text-emerald-400 shrink-0 ml-2">Active</span>}
+                    <span className="truncate">
+                      v{idx + 1}: {ver}
+                    </span>
+                    {isActive && (
+                      <span className="text-[10px] uppercase font-bold text-emerald-400 shrink-0 ml-2">
+                        Active
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -267,19 +285,30 @@ export default function ProjectDetailPage({
 
         <div className="space-y-4">
           {project.milestones.map((milestone) => {
-            const hasApproved = Boolean(activeAddress && milestone.approvals.some((a) => a.toLowerCase() === activeAddress.toLowerCase()));
-            const hasRejected = Boolean(activeAddress && milestone.rejections.some((r) => r.toLowerCase() === activeAddress.toLowerCase()));
+            const hasApproved = Boolean(
+              activeAddress &&
+              milestone.approvals.some((a) => a.toLowerCase() === activeAddress.toLowerCase())
+            );
+            const hasRejected = Boolean(
+              activeAddress &&
+              milestone.rejections.some((r) => r.toLowerCase() === activeAddress.toLowerCase())
+            );
             const hasVoted = hasApproved || hasRejected;
 
             return (
-              <div key={milestone.id} className="p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[1.8rem] sm:rounded-[2rem] ambient-glow">
+              <div
+                key={milestone.id}
+                className="p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[1.8rem] sm:rounded-[2rem] ambient-glow"
+              >
                 <div className="bg-[#0a0a0d] rounded-[calc(1.8rem-0.4rem)] sm:rounded-[calc(2rem-0.5rem)] p-4 sm:p-6 space-y-4 border border-white/5">
                   <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center font-mono font-bold text-xs text-white shrink-0">
                         #{milestone.id + 1}
                       </span>
-                      <h3 className="font-bold text-white text-sm sm:text-base leading-snug">{milestone.desc}</h3>
+                      <h3 className="font-bold text-white text-sm sm:text-base leading-snug">
+                        {milestone.desc}
+                      </h3>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <span className="font-mono font-bold text-emerald-400 text-sm">
@@ -314,8 +343,12 @@ export default function ProjectDetailPage({
                       <div className="flex items-center gap-2 overflow-hidden w-full sm:w-auto">
                         <FileText size={16} className="text-emerald-400 shrink-0" />
                         <div className="flex flex-col min-w-0">
-                          <span className="text-white/40 text-[10px] uppercase font-semibold">IPFS Evidence CID</span>
-                          <span className="text-white/90 truncate font-bold">{milestone.proofCid}</span>
+                          <span className="text-white/40 text-[10px] uppercase font-semibold">
+                            IPFS Evidence CID
+                          </span>
+                          <span className="text-white/90 truncate font-bold">
+                            {milestone.proofCid}
+                          </span>
                         </div>
                       </div>
                       <button
@@ -357,7 +390,10 @@ export default function ProjectDetailPage({
                                 disabled={!selectedFile || submitProofMutation.isPending}
                                 onClick={() =>
                                   selectedFile &&
-                                  submitProofMutation.mutate({ milestoneId: milestone.id, file: selectedFile })
+                                  submitProofMutation.mutate({
+                                    milestoneId: milestone.id,
+                                    file: selectedFile,
+                                  })
                                 }
                                 className="flex-1 rounded-full py-2 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all disabled:opacity-50"
                               >
@@ -398,7 +434,9 @@ export default function ProjectDetailPage({
                         ) : (
                           <>
                             <button
-                              onClick={() => voteMutation.mutate({ milestoneId: milestone.id, approve: true })}
+                              onClick={() =>
+                                voteMutation.mutate({ milestoneId: milestone.id, approve: true })
+                              }
                               disabled={voteMutation.isPending}
                               className="flex-1 rounded-full py-2.5 bg-emerald-500 text-black font-semibold text-xs hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-lg"
                             >
@@ -406,7 +444,9 @@ export default function ProjectDetailPage({
                               <span>Approve Milestone ({milestone.approvals.length}/2)</span>
                             </button>
                             <button
-                              onClick={() => voteMutation.mutate({ milestoneId: milestone.id, approve: false })}
+                              onClick={() =>
+                                voteMutation.mutate({ milestoneId: milestone.id, approve: false })
+                              }
                               disabled={voteMutation.isPending}
                               className="flex-1 rounded-full py-2.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold text-xs hover:bg-rose-500/30 transition-all flex items-center justify-center gap-1.5"
                             >
@@ -442,9 +482,14 @@ export default function ProjectDetailPage({
                   <ShieldCheck size={16} />
                   <span>On-Chain Evidence Inspection</span>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-white leading-snug">{activeEvidence.desc}</h3>
+                <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
+                  {activeEvidence.desc}
+                </h3>
                 <p className="text-xs text-white/50 mt-1">
-                  Milestone Release Value: <span className="text-emerald-400 font-mono font-bold">{activeEvidence.amount}</span>
+                  Milestone Release Value:{" "}
+                  <span className="text-emerald-400 font-mono font-bold">
+                    {activeEvidence.amount}
+                  </span>
                 </p>
               </div>
 
@@ -453,7 +498,9 @@ export default function ProjectDetailPage({
                 <div className="space-y-2 bg-black/60 p-3 rounded-2xl border border-white/10">
                   <div className="text-[11px] text-white/60 font-semibold uppercase tracking-wider flex items-center justify-between">
                     <span>Attached Physical Proof</span>
-                    {activeEvidence.fileName && <span className="text-emerald-400 font-mono">{activeEvidence.fileName}</span>}
+                    {activeEvidence.fileName && (
+                      <span className="text-emerald-400 font-mono">{activeEvidence.fileName}</span>
+                    )}
                   </div>
                   {activeEvidence.dataUrl.startsWith("data:image/") ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -486,7 +533,9 @@ export default function ProjectDetailPage({
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs text-white/60 font-medium">Verified Gateway Resolution Links:</div>
+                <div className="text-xs text-white/60 font-medium">
+                  Verified Gateway Resolution Links:
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <a
                     href={`https://ipfs.io/ipfs/${activeEvidence.cid}`}

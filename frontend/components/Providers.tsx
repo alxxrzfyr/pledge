@@ -12,9 +12,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     checkConnection();
   }, [checkConnection]);
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

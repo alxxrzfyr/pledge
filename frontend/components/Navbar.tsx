@@ -10,8 +10,7 @@ import { ArrowUpRight, SignOut, List, X } from "@phosphor-icons/react";
 export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { address, isConnected, isConnecting, connectWallet, disconnectWallet } =
-    useWalletStore();
+  const { address, isConnected, isConnecting, connectWallet, disconnectWallet } = useWalletStore();
 
   const truncateAddress = (addr: string) => {
     return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
@@ -103,9 +102,7 @@ export function Navbar() {
               href="/"
               onClick={() => setMobileMenuOpen(false)}
               className={`px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
-                pathname === "/"
-                  ? "bg-white/15 text-white"
-                  : "text-white/70 hover:bg-white/5"
+                pathname === "/" ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/5"
               }`}
             >
               Dashboard
@@ -114,9 +111,7 @@ export function Navbar() {
               href="/create"
               onClick={() => setMobileMenuOpen(false)}
               className={`px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
-                pathname === "/create"
-                  ? "bg-white/15 text-white"
-                  : "text-white/70 hover:bg-white/5"
+                pathname === "/create" ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/5"
               }`}
             >
               Create Project

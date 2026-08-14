@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWalletStore } from "@/lib/store";
 import { createProjectOnChain, NATIVE_XLM_SAC, isValidStellarAccount } from "@/lib/soroban";
-import { Plus, Trash, ShieldCheck, Vault, ArrowUpRight, Spinner, Sparkle } from "@phosphor-icons/react";
+import {
+  Plus,
+  Trash,
+  ShieldCheck,
+  Vault,
+  ArrowUpRight,
+  Spinner,
+  Sparkle,
+} from "@phosphor-icons/react";
 
 interface MilestoneInput {
   desc: string;
@@ -101,9 +109,7 @@ export default function CreateProjectPage() {
       return;
     }
 
-    const restrictedAddresses = new Set(
-      [address, contractor.trim()].map((a) => a.toLowerCase())
-    );
+    const restrictedAddresses = new Set([address, contractor.trim()].map((a) => a.toLowerCase()));
     if (trimmedVerifiers.some((v) => restrictedAddresses.has(v.toLowerCase()))) {
       setIsError(true);
       setStatusMsg("Error: the funder and contractor cannot also be listed as verifiers.");
@@ -115,7 +121,9 @@ export default function CreateProjectPage() {
 
     try {
       const milestoneDescs = milestones.map((m) => m.desc.trim());
-      const milestoneAmounts = milestones.map((m) => Math.round((parseFloat(m.amount) || 0) * 10000000));
+      const milestoneAmounts = milestones.map((m) =>
+        Math.round((parseFloat(m.amount) || 0) * 10000000)
+      );
 
       await createProjectOnChain(
         address,
@@ -156,14 +164,18 @@ export default function CreateProjectPage() {
             Create Infrastructure Project
           </h1>
           <p className="text-white/60 text-xs sm:text-sm max-w-[60ch]">
-            Define milestone payment schedule and lock total project budget into the Soroban Treasury escrow contract.
+            Define milestone payment schedule and lock total project budget into the Soroban
+            Treasury escrow contract.
           </p>
         </div>
       </div>
 
       {/* Double-Bezel Form Container */}
       <div className="p-1.5 sm:p-2 bg-white/5 border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] ambient-glow">
-        <form onSubmit={handleSubmit} className="bg-[#07070a] rounded-[calc(2rem-0.4rem)] sm:rounded-[calc(2.5rem-0.5rem)] p-4 sm:p-8 space-y-5 sm:space-y-6 inner-bezel-shadow border border-white/5">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-[#07070a] rounded-[calc(2rem-0.4rem)] sm:rounded-[calc(2.5rem-0.5rem)] p-4 sm:p-8 space-y-5 sm:space-y-6 inner-bezel-shadow border border-white/5"
+        >
           {/* Project Title */}
           <div className="space-y-1.5">
             <label className="block text-[11px] sm:text-xs font-semibold text-white/80 uppercase tracking-wider">
@@ -239,9 +251,14 @@ export default function CreateProjectPage() {
             </div>
 
             {milestones.map((m, idx) => (
-              <div key={idx} className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
+              <div
+                key={idx}
+                className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5"
+              >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-mono font-bold text-white/40 w-5 shrink-0">#{idx + 1}</span>
+                  <span className="text-xs font-mono font-bold text-white/40 w-5 shrink-0">
+                    #{idx + 1}
+                  </span>
                   <input
                     type="text"
                     required
@@ -328,7 +345,9 @@ export default function CreateProjectPage() {
                 </>
               ) : (
                 <>
-                  <span className="truncate">Deploy & Escrow {totalBudget.toLocaleString()} XLM</span>
+                  <span className="truncate">
+                    Deploy & Escrow {totalBudget.toLocaleString()} XLM
+                  </span>
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/10 flex items-center justify-center text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0">
                     <ArrowUpRight size={14} weight="bold" />
                   </div>
