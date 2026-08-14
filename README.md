@@ -9,7 +9,7 @@
 
   [![Stellar Soroban](https://img.shields.io/badge/Stellar-Soroban_v22.0.0-brightgreen.svg)](https://soroban.stellar.org)
   [![Next.js 16](https://img.shields.io/badge/Next.js-16_App_Router-black.svg)](https://nextjs.org)
-  [![Tests Passing](https://img.shields.io/badge/Tests-3_Passing-brightgreen.svg)](#testing)
+  [![Tests Passing](https://img.shields.io/badge/Tests-5_contract_%2B_20_frontend-brightgreen.svg)](#testing)
   [![Mobile Ready](https://img.shields.io/badge/Mobile-320px_Supported-blue.svg)](#responsive-design)
   [![Network](https://img.shields.io/badge/Network-Stellar_Testnet-orange.svg)](https://stellar.expert/explorer/testnet)
 
@@ -30,7 +30,7 @@ Pledge locks project funds in an escrow vault contract and releases them to cont
 | Item | Link / Value |
 |---|---|
 | **Live Application** | [pledge-dapp.vercel.app](https://pledge-dapp.vercel.app) |
-| **Demo Video** | [View on YouTube](https://youtube.com) |
+| **Demo Video** | Recording pending. Every claim below is independently verifiable on-chain via the transaction hashes in the next section. |
 
 ### Deployed Contracts (Stellar Testnet)
 
@@ -48,6 +48,33 @@ Pledge locks project funds in an escrow vault contract and releases them to cont
 | Treasury Init | `c1533d65b30f3f58faa566503b3c44e8fc48c72197455a6d62ea6fe0e0dfd387` |
 | Registry Init | `99744ea2e097b59ca80994aa6e1a707868bad639659f3510302c789ead77b5e1` |
 
+### Verified End-to-End Lifecycle (Stellar Testnet)
+
+A complete funder-to-contractor payout was executed on Testnet. These are the
+real transaction hashes, in order, for a single project taken from creation
+through automatic fund release. Every step is independently verifiable.
+
+| Step | Actor | Contract Call | Transaction Hash |
+|---|---|---|---|
+| 1. Create and escrow | Funder | `create_project` | `92356b12ae2ae09b1659e86bfd38701632dc98951fdcdb696dfff5ff94d52bf6` |
+| 2. Submit evidence | Contractor | `submit_proof` | `d8b84e9092fa29d80a297b6674d69033c7246fb89772bf48f8f7d8998b6a5d30` |
+| 3. First approval | Verifier 1 | `verify_milestone` | `c093c4ded5a08141ebc49695d3a54edab15e4e45af0b2140914aac3d4ea06ef2` |
+| 4. Second approval, triggers release | Verifier 2 | `verify_milestone` then `Treasury.release` | `2e00f87aa999a8b0441e09bd8c2938f983c4e48504c12507015199aeeffda502` |
+
+Verified on-chain outcome of step 4: the Registry cross-invoked
+`Treasury.release()` in the same transaction, emitting a `released` event and a
+native XLM `transfer` from the Treasury contract to the contractor. The
+contractor's balance increased by the full milestone amount with no manual
+transfer and no intermediary. The project's status advanced to `Completed` and
+the milestone to `Verified` with 2 recorded approvals.
+
+Contract state can be re-checked at any time with:
+
+```bash
+stellar contract invoke --id CCZES3TPZTDVUEX3BVZOL7MT2JDPNCVVK6TTG6N2NZQLBQQYEIJESRDQ \
+  --source-account deployer --network testnet -- get_project --project_id 2
+```
+
 ---
 
 ## Screenshots
@@ -62,16 +89,28 @@ Pledge locks project funds in an escrow vault contract and releases them to cont
 ### Verified Test Output
 
 ```text
-running 2 tests
+running 4 tests
+test test::test_duplicate_verifiers_rejected - should panic ... ok
+test test::test_contractor_as_verifier_rejected - should panic ... ok
 test test::test_unauthorized_proof_submission - should panic ... ok
 test test::test_registry_full_workflow ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 
 running 1 test
 test test::test_treasury_init_and_release ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+```
+
+### Verified Frontend Test Output
+
+```text
+ ✓ lib/store.test.ts (8 tests)
+ ✓ lib/soroban.test.ts (12 tests)
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
 ```
 
 ---
@@ -313,6 +352,13 @@ NEXT_PUBLIC_REGISTRY_CONTRACT_ID=<your registry address>
 NEXT_PUBLIC_TREASURY_CONTRACT_ID=<your treasury address>
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+
+# Optional. The escrow token's Stellar Asset Contract address. Defaults to the
+# native XLM SAC on Testnet. This MUST match the token the Treasury was
+# initialized with, otherwise create_project escrows an asset that
+# Treasury.release cannot pay out. Verify with:
+#   stellar contract invoke --id <treasury> --network testnet -- get_token
+NEXT_PUBLIC_NATIVE_TOKEN_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
 ### 8. Run the frontend

@@ -6,6 +6,8 @@ import {
   Contract,
   TransactionBuilder,
   Address,
+  Account,
+  StrKey,
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
 import { Project, Milestone, ProjectState, MilestoneState, MOCK_PROJECTS } from "./types";
@@ -18,6 +20,48 @@ export const REGISTRY_CONTRACT_ID =
   process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ID || "";
 export const TREASURY_CONTRACT_ID =
   process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ID || "";
+
+/**
+ * Contract address of the native XLM Stellar Asset Contract on Testnet.
+ *
+ * This MUST match the token the Treasury contract was initialized with,
+ * otherwise create_project's token transfer targets a different asset than
+ * the one Treasury.release can pay out, and the escrow becomes unspendable.
+ * Verified against the deployed Treasury via `Treasury.get_token()`:
+ *   CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+ *
+ * Overridable so a Mainnet or custom-token deployment does not require a
+ * code change. Defined here rather than inline in a component so the value
+ * cannot drift between call sites.
+ */
+export const NATIVE_XLM_SAC =
+  process.env.NEXT_PUBLIC_NATIVE_TOKEN_ID ||
+  "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+/**
+ * True when `value` is a well-formed Stellar account public key (G...).
+ * Checks the StrKey checksum, so a truncated or mistyped address is caught
+ * before it reaches `new Address()`, which throws an opaque
+ * "Unsupported address type" error that is hard to trace back to the input.
+ */
+export function isValidStellarAccount(value: string): boolean {
+  try {
+    return StrKey.isValidEd25519PublicKey(value.trim());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True when `value` is a well-formed Soroban contract address (C...).
+ */
+export function isValidContractAddress(value: string): boolean {
+  try {
+    return StrKey.isValidContract(value.trim());
+  } catch {
+    return false;
+  }
+}
 
 /**
  * DEMO_MODE is true whenever no Registry contract is configured. In that
@@ -99,6 +143,29 @@ function getSignedXdr(signRes: any): string {
 }
 
 /**
+ * Wraps a promise with a timeout. Freighter's signTransaction can hang
+ * indefinitely if the extension is missing, locked, or fails to inject its
+ * content script (a known class of issue on some browsers), leaving the UI
+ * stuck on a loading state with no error. This guarantees a rejection
+ * instead of an infinite wait.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
+/**
  * Submits a signed transaction and polls until it settles. Throws on any
  * non-success terminal state instead of returning a placeholder result, so
  * callers can never mistake a failed submission for a successful one.
@@ -107,9 +174,13 @@ async function submitAndAwaitTransaction(
   preparedTxXdr: string,
   errorContext: string
 ): Promise<string> {
-  const signRes = await signTransaction(preparedTxXdr, {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
+  const SIGN_TIMEOUT_MS = 60_000; // Freighter must respond to the signing prompt within 60s.
+
+  const signRes = await withTimeout(
+    signTransaction(preparedTxXdr, { networkPassphrase: NETWORK_PASSPHRASE }),
+    SIGN_TIMEOUT_MS,
+    `${errorContext}: Freighter did not respond to the signing request within 60 seconds. Check that the Freighter extension is installed, unlocked, and not blocked by the browser.`
+  );
   const signedXdr = getSignedXdr(signRes);
 
   const sendRes = await server.sendTransaction(
@@ -148,9 +219,64 @@ async function submitAndAwaitTransaction(
 }
 
 /**
- * Fetch project details from Soroban RPC. Falls back to the local demo
- * store only when DEMO_MODE is active; otherwise a real RPC failure is
- * thrown so the UI can show an accurate error rather than stale mock data.
+ * Placeholder source account for read-only simulation.
+ *
+ * Simulating a contract call requires a source account to build a
+ * transaction, but the RPC simulation endpoint never verifies that the
+ * account exists or has a balance, and nothing is ever signed or submitted.
+ * Using a fixed all-zero key keeps reads working for visitors who have no
+ * wallet connected, which is required for the public "citizen" view.
+ * Hardcoded rather than derived via Buffer so it does not pull a Node
+ * polyfill into the browser bundle.
+ */
+const READ_ONLY_SOURCE = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+
+/**
+ * Invoke a read-only contract function through RPC simulation and return the
+ * decoded native result.
+ *
+ * Simulation is used rather than reading raw ledger entries via
+ * getContractData because the contract's storage keys are `#[contracttype]`
+ * enum variants. Those serialize as ScVec (even unit variants such as
+ * `ProjectCount`), and instance-storage values are not standalone ledger
+ * entries at all: they live inside the contract instance's storage map. Both
+ * details are easy to encode incorrectly. Calling the contract's own
+ * accessor functions instead keeps the frontend coupled to the contract's
+ * public API, which is the interface the contract actually guarantees.
+ */
+async function simulateRead(functionName: string, ...args: xdr.ScVal[]): Promise<any> {
+  const contract = new Contract(REGISTRY_CONTRACT_ID);
+  const tx = new TransactionBuilder(new Account(READ_ONLY_SOURCE, "0"), {
+    fee: "100000",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(contract.call(functionName, ...args))
+    .setTimeout(30)
+    .build();
+
+  const sim = await withTimeout(
+    server.simulateTransaction(tx),
+    20_000,
+    `Soroban RPC did not respond to the ${functionName} simulation within 20 seconds. Check that ${SOROBAN_RPC_URL} is reachable.`
+  );
+
+  if (rpc.Api.isSimulationError(sim)) {
+    throw new Error(`Registry.${functionName} failed: ${sim.error}`);
+  }
+
+  const retval = sim.result?.retval;
+  if (!retval) {
+    throw new Error(`Registry.${functionName} returned no value`);
+  }
+
+  return scValToNative(retval);
+}
+
+/**
+ * Fetch project details from the Registry contract's get_project function.
+ * Falls back to the local demo store only when DEMO_MODE is active;
+ * otherwise a real RPC failure is thrown so the UI can show an accurate
+ * error rather than stale mock data.
  */
 export async function getProjectById(id: number): Promise<Project> {
   if (DEMO_MODE) {
@@ -159,46 +285,25 @@ export async function getProjectById(id: number): Promise<Project> {
     throw new Error(`Project ${id} not found in local demo store`);
   }
 
-  const tx = await server.getContractData(
-    REGISTRY_CONTRACT_ID,
-    xdr.ScVal.scvVec([
-      xdr.ScVal.scvSymbol("Project"),
-      xdr.ScVal.scvU32(id),
-    ]),
-    "persistent" as any
-  );
-
-  if (!tx || !(tx as any).val) {
+  const native = await simulateRead("get_project", xdr.ScVal.scvU32(id));
+  if (!native) {
     throw new Error(`Project ${id} not found on Registry contract`);
   }
-
-  const val = (tx as any).val.contractData ? (tx as any).val.contractData().val() : (tx as any).val;
-  const native = scValToNative(val as xdr.ScVal);
   return parseProjectNative(native);
 }
 
 /**
  * Fetch all projects. In DEMO_MODE, reads from the local store only. In
- * live mode, reads the on-chain project count and fetches each project by
- * ID; a failure fetching the count is a real error, not a silent fallback.
+ * live mode, reads the on-chain project count via get_project_count and
+ * fetches each project by ID; a failure fetching the count is a real error,
+ * not a silent fallback.
  */
 export async function getAllProjects(): Promise<Project[]> {
   if (DEMO_MODE) {
     return [...loadLocalProjects()].sort((a, b) => b.id - a.id);
   }
 
-  const countTx = await server.getContractData(
-    REGISTRY_CONTRACT_ID,
-    xdr.ScVal.scvSymbol("ProjectCount"),
-    "instance" as any
-  );
-
-  if (!countTx || !(countTx as any).val) {
-    throw new Error("Unable to read project count from Registry contract");
-  }
-
-  const val = (countTx as any).val.contractData ? (countTx as any).val.contractData().val() : (countTx as any).val;
-  const count = scValToNative(val as xdr.ScVal) as number;
+  const count = Number(await simulateRead("get_project_count"));
 
   const projects: Project[] = [];
   for (let i = 1; i <= count; i++) {
@@ -231,43 +336,124 @@ export async function createProjectOnChain(
 ): Promise<string> {
   let txHash: string;
 
+  // Normalize before validating or encoding. A pasted address with trailing
+  // whitespace is otherwise rejected deep inside `new Address()` with an
+  // opaque "Unsupported address type" error that gives the user no way to
+  // tell which of the five address fields was at fault.
+  const funderAddr = funder.trim();
+  const contractorAddr = contractor.trim();
+  const verifierAddrs = verifiers.map((v) => v.trim());
+  const descriptions = milestonesDesc.map((d) => d.trim());
+  const token = tokenAddress.trim();
+
+  const labelledAccounts: [string, string][] = [
+    ["funder", funderAddr],
+    ["contractor", contractorAddr],
+    ["verifier 1", verifierAddrs[0] ?? ""],
+    ["verifier 2", verifierAddrs[1] ?? ""],
+    ["verifier 3", verifierAddrs[2] ?? ""],
+  ];
+
+  for (const [label, value] of labelledAccounts) {
+    if (!value) {
+      throw new Error(`The ${label} address is required.`);
+    }
+    if (!isValidStellarAccount(value)) {
+      throw new Error(
+        `The ${label} address is not a valid Stellar public key. It must start with "G" and be 56 characters long. Received: "${value}"`
+      );
+    }
+  }
+
+  if (!isValidContractAddress(token)) {
+    throw new Error(
+      `The escrow token address "${token}" is not a valid Soroban contract address. Check NEXT_PUBLIC_NATIVE_TOKEN_ID.`
+    );
+  }
+
+  if (verifierAddrs.length !== 3) {
+    throw new Error("Exactly 3 verifiers are required by the Registry contract.");
+  }
+
+  if (descriptions.length !== milestonesAmounts.length || descriptions.length === 0) {
+    throw new Error("Each milestone needs both a description and an amount.");
+  }
+
+  descriptions.forEach((desc, i) => {
+    if (!desc) {
+      throw new Error(`Milestone ${i + 1} is missing a description.`);
+    }
+    if (!Number.isFinite(milestonesAmounts[i]) || milestonesAmounts[i] <= 0) {
+      throw new Error(`Milestone ${i + 1} must have an amount greater than zero.`);
+    }
+  });
+
   if (DEMO_MODE) {
     txHash = `demo-${crypto.randomUUID()}`;
   } else {
+    // Only meaningful in live mode: DEMO_MODE is defined as "no Registry
+    // contract configured", so an empty ID here is expected, not an error.
+    if (!isValidContractAddress(REGISTRY_CONTRACT_ID)) {
+      throw new Error(
+        `The Registry contract address "${REGISTRY_CONTRACT_ID}" is not a valid Soroban contract address. Check NEXT_PUBLIC_REGISTRY_CONTRACT_ID.`
+      );
+    }
+
     const verifiersScVal = xdr.ScVal.scvVec(
-      verifiers.map((v) => new Address(v).toScVal())
+      verifierAddrs.map((v) => new Address(v).toScVal())
     );
     const descScVal = xdr.ScVal.scvVec(
-      milestonesDesc.map((d) => nativeToScVal(d))
+      descriptions.map((d) => nativeToScVal(d))
     );
     const amountsScVal = xdr.ScVal.scvVec(
       milestonesAmounts.map((a) => nativeToScVal(BigInt(a), { type: "i128" }))
     );
 
     const contract = new Contract(REGISTRY_CONTRACT_ID);
-    const account = await server.getAccount(funder);
 
-    const tx = new TransactionBuilder(account, {
-      fee: "100000",
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(
-        contract.call(
-          "create_project",
-          new Address(funder).toScVal(),
-          nativeToScVal(name),
-          new Address(contractor).toScVal(),
-          verifiersScVal,
-          descScVal,
-          amountsScVal,
-          new Address(tokenAddress).toScVal()
+    console.log("[Pledge] Fetching account from Soroban RPC...", funderAddr);
+    const account = await withTimeout(
+      server.getAccount(funderAddr),
+      15_000,
+      "Failed to fetch your account from Soroban RPC within 15 seconds. Check that the funder account is funded on Testnet and the RPC URL is reachable."
+    );
+    console.log("[Pledge] Account fetched OK. Building transaction...");
+
+    let tx;
+    try {
+      tx = new TransactionBuilder(account, {
+        fee: "100000",
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(
+          contract.call(
+            "create_project",
+            new Address(funderAddr).toScVal(),
+            nativeToScVal(name.trim()),
+            new Address(contractorAddr).toScVal(),
+            verifiersScVal,
+            descScVal,
+            amountsScVal,
+            new Address(token).toScVal()
+          )
         )
-      )
-      .setTimeout(30)
-      .build();
+        .setTimeout(30)
+        .build();
+    } catch (buildErr: any) {
+      console.error("[Pledge] Transaction BUILD failed:", buildErr);
+      throw new Error(`Failed to build transaction: ${buildErr.message}`);
+    }
 
-    const preparedTx = await server.prepareTransaction(tx);
+    console.log("[Pledge] Transaction built. Simulating on Soroban RPC (prepareTransaction)...");
+    const preparedTx = await withTimeout(
+      server.prepareTransaction(tx),
+      30_000,
+      "Soroban RPC did not respond to transaction simulation within 30 seconds. The contract may not exist at the configured address, or the RPC endpoint may be unreachable."
+    );
+    console.log("[Pledge] Simulation OK. Requesting Freighter signature...");
+
     txHash = await submitAndAwaitTransaction(preparedTx.toXDR(), "Project creation failed");
+    console.log("[Pledge] Transaction confirmed:", txHash);
   }
 
   // Mirror the result into the local store so the UI reflects it immediately,
@@ -275,7 +461,7 @@ export async function createProjectOnChain(
   const projects = loadLocalProjects();
   const newId = projects.length > 0 ? Math.max(...projects.map((p) => p.id)) + 1 : 1;
 
-  const formattedMilestones: Milestone[] = milestonesDesc.map((desc, i) => {
+  const formattedMilestones: Milestone[] = descriptions.map((desc, i) => {
     const rawVal = BigInt(milestonesAmounts[i] || 0);
     const xlmAmount = (Number(rawVal) / 10000000).toLocaleString();
     return {
@@ -295,14 +481,14 @@ export async function createProjectOnChain(
 
   const newProject: Project = {
     id: newId,
-    name,
-    lgu: funder,
-    contractor,
-    verifiers,
+    name: name.trim(),
+    lgu: funderAddr,
+    contractor: contractorAddr,
+    verifiers: verifierAddrs,
     milestones: formattedMilestones,
     status: ProjectState.Funded,
     flagCount: 0,
-    token: tokenAddress || "NATIVE",
+    token,
     totalBudget: `${totalXlm} XLM`,
   };
 

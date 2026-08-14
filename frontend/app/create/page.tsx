@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWalletStore } from "@/lib/store";
-import { createProjectOnChain } from "@/lib/soroban";
+import { createProjectOnChain, NATIVE_XLM_SAC, isValidStellarAccount } from "@/lib/soroban";
 import { Plus, Trash, ShieldCheck, Vault, ArrowUpRight, Spinner, Sparkle } from "@phosphor-icons/react";
 
 interface MilestoneInput {
@@ -25,6 +25,7 @@ export default function CreateProjectPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   const totalBudget = milestones.reduce((sum, m) => sum + (parseFloat(m.amount) || 0), 0);
 
@@ -39,14 +40,63 @@ export default function CreateProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsError(false);
     if (!isConnected || !address) {
-      alert("Please connect your Freighter wallet first.");
+      setIsError(true);
+      setStatusMsg("Connect your Freighter wallet before deploying a project.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setIsError(true);
+      setStatusMsg("Error: the project title is required.");
       return;
     }
 
     const trimmedVerifiers = verifiers.map((v) => v.trim());
+
+    // Validate address shape before building the transaction. Without this,
+    // a mistyped or truncated key fails inside the Stellar SDK's Address
+    // constructor with an opaque "Unsupported address type" message that does
+    // not say which field was wrong.
+    const addressFields: [string, string][] = [
+      ["Contractor wallet address", contractor.trim()],
+      ["Verifier 1 address", trimmedVerifiers[0]],
+      ["Verifier 2 address", trimmedVerifiers[1]],
+      ["Verifier 3 address", trimmedVerifiers[2]],
+    ];
+    for (const [label, value] of addressFields) {
+      if (!value) {
+        setIsError(true);
+        setStatusMsg(`Error: ${label} is required.`);
+        return;
+      }
+      if (!isValidStellarAccount(value)) {
+        setIsError(true);
+        setStatusMsg(
+          `Error: ${label} is not a valid Stellar public key. It must start with "G" and be 56 characters long.`
+        );
+        return;
+      }
+    }
+
+    for (let i = 0; i < milestones.length; i++) {
+      if (!milestones[i].desc.trim()) {
+        setIsError(true);
+        setStatusMsg(`Error: milestone ${i + 1} needs a description.`);
+        return;
+      }
+      const amount = parseFloat(milestones[i].amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        setIsError(true);
+        setStatusMsg(`Error: milestone ${i + 1} needs an amount greater than zero.`);
+        return;
+      }
+    }
+
     const uniqueVerifiers = new Set(trimmedVerifiers.map((v) => v.toLowerCase()));
     if (uniqueVerifiers.size !== trimmedVerifiers.length) {
+      setIsError(true);
       setStatusMsg("Error: verifier addresses must be distinct. You entered a duplicate.");
       return;
     }
@@ -55,6 +105,7 @@ export default function CreateProjectPage() {
       [address, contractor.trim()].map((a) => a.toLowerCase())
     );
     if (trimmedVerifiers.some((v) => restrictedAddresses.has(v.toLowerCase()))) {
+      setIsError(true);
       setStatusMsg("Error: the funder and contractor cannot also be listed as verifiers.");
       return;
     }
@@ -63,18 +114,17 @@ export default function CreateProjectPage() {
     setStatusMsg("Building atomic escrow transaction on Soroban...");
 
     try {
-      const milestoneDescs = milestones.map((m) => m.desc);
+      const milestoneDescs = milestones.map((m) => m.desc.trim());
       const milestoneAmounts = milestones.map((m) => Math.round((parseFloat(m.amount) || 0) * 10000000));
-      const nativeXlmSac = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMWAACNHB4B6QZ";
 
       await createProjectOnChain(
         address,
         name,
-        contractor,
-        verifiers,
+        contractor.trim(),
+        trimmedVerifiers,
         milestoneDescs,
         milestoneAmounts,
-        nativeXlmSac
+        NATIVE_XLM_SAC
       );
 
       setStatusMsg("Project created! Escrow budget locked into Treasury.");
@@ -82,7 +132,17 @@ export default function CreateProjectPage() {
         router.push("/");
       }, 1500);
     } catch (err: any) {
-      setStatusMsg(`Error: ${err.message}`);
+      const raw = err?.message || String(err);
+      // Freighter reports a user-declined signature as a rejection rather
+      // than a failure. Treating it as a hard error is misleading, since
+      // nothing went wrong and the user can simply retry.
+      const cancelled = /declined|denied|reject|cancel/i.test(raw);
+      setIsError(true);
+      setStatusMsg(
+        cancelled
+          ? "Signing was cancelled in Freighter. No funds were moved. You can review the details and try again."
+          : `Error: ${raw}`
+      );
       setIsSubmitting(false);
     }
   };
@@ -232,6 +292,28 @@ export default function CreateProjectPage() {
             </div>
           </div>
 
+          {/* Status and error surface.
+              Rendered outside the submit button because the button only shows
+              text while isSubmitting is true. A failure sets isSubmitting back
+              to false, so a message rendered only inside the button would
+              disappear the instant it became relevant. */}
+          {statusMsg && (
+            <div
+              role={isError ? "alert" : "status"}
+              aria-live={isError ? "assertive" : "polite"}
+              className={
+                isError
+                  ? "rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs sm:text-sm text-red-200 break-words"
+                  : "rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs sm:text-sm text-emerald-200 break-words"
+              }
+            >
+              <p className="font-semibold mb-0.5">
+                {isError ? "Transaction not submitted" : "Status"}
+              </p>
+              <p className="font-mono leading-relaxed">{statusMsg}</p>
+            </div>
+          )}
+
           {/* Submit Action Button */}
           {isConnected ? (
             <button
@@ -242,7 +324,7 @@ export default function CreateProjectPage() {
               {isSubmitting ? (
                 <>
                   <Spinner size={16} className="animate-spin text-black shrink-0" />
-                  <span>{statusMsg || "Creating..."}</span>
+                  <span className="truncate">Deploying to Soroban...</span>
                 </>
               ) : (
                 <>
