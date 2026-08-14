@@ -474,7 +474,7 @@ GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push:
 | Job | Steps |
 |---|---|
 | Contracts | Install Rust, add `wasm32` target, run `cargo test --workspace`, build WASM |
-| Frontend | Install Node.js 22, `npm install`, `npm run lint`, `npm run build` |
+| Frontend | Install Node.js 22, `npm ci`, `npm run format:check`, `npm run lint`, `npm test`, `npm run build` |
 
 ---
 

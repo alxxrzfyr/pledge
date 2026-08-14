@@ -1,0 +1,17 @@
+# Build output and dependencies
+.next/
+out/
+build/
+node_modules/
+
+# Generated files
+next-env.d.ts
+package-lock.json
+
+# Documentation is hand-formatted for readability, including aligned tables
+# that Prettier would reflow. Format prose by hand, not by tool.
+*.md
+
+# Environment files
+.env
+.env.*
