@@ -261,7 +261,7 @@ Both contracts are written in Rust using `soroban-sdk v22.0.0`.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/pledge.git
+git clone https://github.com/alxxrzfyr/pledge.git
 cd pledge
 ```
 
