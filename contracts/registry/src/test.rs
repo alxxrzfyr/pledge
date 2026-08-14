@@ -164,3 +164,97 @@ fn test_unauthorized_proof_submission() {
     let cid = String::from_str(&env, "QmFakeProof");
     registry_client.submit_proof(&attacker, &proj_id, &0, &cid);
 }
+
+#[test]
+#[should_panic(expected = "verifiers must be distinct addresses")]
+fn test_duplicate_verifiers_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let funder = Address::generate(&env);
+    let contractor = Address::generate(&env);
+    let verifier1 = Address::generate(&env);
+    let verifier2 = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let token_address = token_contract.address();
+    let token_admin_client = token::StellarAssetClient::new(&env, &token_address);
+    token_admin_client.mint(&funder, &100_000);
+
+    let registry_id = env.register(RegistryContract, ());
+    let registry_client = RegistryContractClient::new(&env, &registry_id);
+
+    let treasury_id = env.register(TreasuryContract, ());
+    let treasury_client = TreasuryContractClient::new(&env, &treasury_id);
+    treasury_client.init(&registry_id, &token_address);
+    registry_client.init(&treasury_id);
+
+    // verifier1 appears twice
+    let mut verifiers = Vec::new(&env);
+    verifiers.push_back(verifier1.clone());
+    verifiers.push_back(verifier1);
+    verifiers.push_back(verifier2);
+
+    let mut m_desc = Vec::new(&env);
+    m_desc.push_back(String::from_str(&env, "Phase 1"));
+    let mut m_amounts = Vec::new(&env);
+    m_amounts.push_back(100_000);
+
+    registry_client.create_project(
+        &funder,
+        &String::from_str(&env, "Road Paving"),
+        &contractor,
+        &verifiers,
+        &m_desc,
+        &m_amounts,
+        &token_address,
+    );
+}
+
+#[test]
+#[should_panic(expected = "funder and contractor cannot also be verifiers")]
+fn test_contractor_as_verifier_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let funder = Address::generate(&env);
+    let contractor = Address::generate(&env);
+    let verifier2 = Address::generate(&env);
+    let verifier3 = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let token_address = token_contract.address();
+    let token_admin_client = token::StellarAssetClient::new(&env, &token_address);
+    token_admin_client.mint(&funder, &100_000);
+
+    let registry_id = env.register(RegistryContract, ());
+    let registry_client = RegistryContractClient::new(&env, &registry_id);
+
+    let treasury_id = env.register(TreasuryContract, ());
+    let treasury_client = TreasuryContractClient::new(&env, &treasury_id);
+    treasury_client.init(&registry_id, &token_address);
+    registry_client.init(&treasury_id);
+
+    // contractor is also listed as a verifier
+    let mut verifiers = Vec::new(&env);
+    verifiers.push_back(contractor.clone());
+    verifiers.push_back(verifier2);
+    verifiers.push_back(verifier3);
+
+    let mut m_desc = Vec::new(&env);
+    m_desc.push_back(String::from_str(&env, "Phase 1"));
+    let mut m_amounts = Vec::new(&env);
+    m_amounts.push_back(100_000);
+
+    registry_client.create_project(
+        &funder,
+        &String::from_str(&env, "Road Paving"),
+        &contractor,
+        &verifiers,
+        &m_desc,
+        &m_amounts,
+        &token_address,
+    );
+}

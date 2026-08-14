@@ -98,6 +98,18 @@ impl RegistryContract {
             panic!("verifiers must be exactly 3");
         }
 
+        for i in 0..verifiers.len() {
+            for j in (i + 1)..verifiers.len() {
+                if verifiers.get(i).unwrap() == verifiers.get(j).unwrap() {
+                    panic!("verifiers must be distinct addresses");
+                }
+            }
+        }
+
+        if verifiers.iter().any(|v| v == funder || v == contractor) {
+            panic!("funder and contractor cannot also be verifiers");
+        }
+
         if milestone_descriptions.len() != milestones_amounts.len() || milestone_descriptions.len() == 0 {
             panic!("invalid milestone parameters");
         }
