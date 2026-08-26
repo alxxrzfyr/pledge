@@ -94,6 +94,19 @@ const freighterMocks = vi.hoisted(() => ({
 vi.mock("@stellar/freighter-api", () => freighterMocks);
 
 describe("lib/soroban", () => {
+  it("exposes Registry entry points with names matching the Soroban contract", async () => {
+    const soroban = await import("@/lib/soroban");
+
+    expect(soroban.REGISTRY_METHODS).toEqual({
+      getProject: "get_project",
+      getProjectCount: "get_project_count",
+      createProject: "create_project",
+      submitProof: "submit_proof",
+      verifyMilestone: "verify_milestone",
+      flagProject: "flag_project",
+    });
+  });
+
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();

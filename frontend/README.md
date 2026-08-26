@@ -119,6 +119,36 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 - `npm run build`: Compiles optimized production build.
 - `npm run start`: Starts production server.
 - `npm run lint`: Runs ESLint check across all TypeScript components.
+- `npm run typecheck`: Runs TypeScript without emitting build output.
+
+---
+
+## Reviewer Integration Map
+
+The complete wallet and Soroban integration is committed in these files:
+
+| Concern | Source file | Implementation visible in code |
+|---|---|---|
+| Freighter connection UI | [`components/Navbar.tsx`](components/Navbar.tsx) | Connect/disconnect buttons call the Zustand wallet actions. |
+| Freighter state and permissions | [`lib/store.ts`](lib/store.ts) | Uses `isConnected`, `requestAccess`, `getAddress`, and `setAllowed` from `@stellar/freighter-api`. |
+| Soroban RPC and signing | [`lib/soroban.ts`](lib/soroban.ts) | Builds `@stellar/stellar-sdk` transactions, prepares them through Soroban RPC, signs with Freighter, submits, and waits for confirmation. |
+| Public project reads | [`app/page.tsx`](app/page.tsx) | Calls `getAllProjects`, which simulates `get_project_count` and `get_project`. |
+| Funder escrow flow | [`app/create/page.tsx`](app/create/page.tsx) | Calls `createProjectOnChain`, which encodes and submits `create_project`. |
+| Contractor/verifier/citizen actions | [`app/project/[id]/page.tsx`](app/project/%5Bid%5D/page.tsx) | Calls `submitProofOnChain`, `verifyMilestoneOnChain`, and `flagProjectOnChain`. |
+| Browser dependencies and validation commands | [`package.json`](package.json) | Declares Freighter, Stellar SDK, Next.js, Vitest, lint, typecheck, and build dependencies/scripts. |
+
+### Registry function matching
+
+| Frontend method | Registry entry point in [`contracts/registry/src/lib.rs`](../contracts/registry/src/lib.rs) |
+|---|---|
+| `getProject` | `get_project` |
+| `getProjectCount` | `get_project_count` |
+| `createProject` | `create_project` |
+| `submitProof` | `submit_proof` |
+| `verifyMilestone` | `verify_milestone` |
+| `flagProject` | `flag_project` |
+
+The Registry invokes Treasury `release(to, amount)` after the second approval; the frontend does not bypass that contract-controlled release path.
 
 ---
 

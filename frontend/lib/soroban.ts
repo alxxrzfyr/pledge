@@ -19,6 +19,16 @@ export const NETWORK_PASSPHRASE =
 export const REGISTRY_CONTRACT_ID = process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ID || "";
 export const TREASURY_CONTRACT_ID = process.env.NEXT_PUBLIC_TREASURY_CONTRACT_ID || "";
 
+/** Public Registry entry points consumed by the frontend transaction/read helpers. */
+export const REGISTRY_METHODS = {
+  getProject: "get_project",
+  getProjectCount: "get_project_count",
+  createProject: "create_project",
+  submitProof: "submit_proof",
+  verifyMilestone: "verify_milestone",
+  flagProject: "flag_project",
+} as const;
+
 /**
  * Contract address of the native XLM Stellar Asset Contract on Testnet.
  *
